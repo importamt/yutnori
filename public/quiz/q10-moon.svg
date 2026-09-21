@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400">
+  <defs><radialGradient id="m"><stop offset="0" stop-color="#fff8dc"/><stop offset="1" stop-color="#f2d27a"/></radialGradient></defs>
+  <rect width="640" height="400" fill="#1b2340"/>
+  <circle cx="440" cy="140" r="90" fill="url(#m)"/>
+  <g fill="#fff" opacity=".8"><circle cx="80" cy="60" r="2"/><circle cx="160" cy="120" r="2.5"/><circle cx="260" cy="50" r="2"/><circle cx="580" cy="300" r="2"/><circle cx="120" cy="220" r="1.5"/></g>
+  <path d="M0 330 Q 160 260 320 330 T 640 330 L 640 400 L 0 400 Z" fill="#2e3b2e"/>
+  <g transform="translate(140 280)"><path d="M0 60 L 30 0 L 110 0 L 140 60 Z" fill="#4a3222"/><rect x="10" y="60" width="120" height="50" fill="#e9dcc2"/></g>
+  <text x="320" y="380" font-size="22" text-anchor="middle" fill="#f6efdf" font-family="serif">음력 8월 15일 밤</text>
+</svg>

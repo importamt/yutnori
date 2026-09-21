@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400">
+  <rect width="640" height="400" fill="#63c24a"/>
+  <g fill="#d8d2c0">
+    <rect x="80" y="60" width="480" height="280"/>
+  </g>
+  <g fill="#cbc5b2"><rect x="80" y="60" width="60" height="70"/><rect x="200" y="60" width="60" height="70"/><rect x="320" y="60" width="60" height="70"/><rect x="440" y="60" width="60" height="70"/><rect x="140" y="130" width="60" height="70"/><rect x="260" y="130" width="60" height="70"/><rect x="380" y="130" width="60" height="70"/><rect x="500" y="130" width="60" height="70"/><rect x="80" y="200" width="60" height="70"/><rect x="200" y="200" width="60" height="70"/><rect x="320" y="200" width="60" height="70"/><rect x="440" y="200" width="60" height="70"/><rect x="140" y="270" width="60" height="70"/><rect x="260" y="270" width="60" height="70"/><rect x="380" y="270" width="60" height="70"/><rect x="500" y="270" width="60" height="70"/></g>
+  <g stroke="#8d8d86" stroke-width="14"><line x1="120" y1="200" x2="520" y2="200"/></g>
+  <g fill="#f3efe2" stroke="#9c9c95" stroke-width="4"><rect x="100" y="170" width="60" height="60"/><rect x="480" y="170" width="60" height="60"/></g>
+  <rect x="290" y="165" width="70" height="70" fill="#f7c02c" stroke="#b07f10" stroke-width="4"/>
+  <!-- red character on the square -->
+  <g transform="translate(325 232)">
+    <rect x="-16" y="-70" width="32" height="26" fill="#f7d6b0"/><rect x="-18" y="-80" width="36" height="12" fill="#a83a2e"/>
+    <rect x="-8" y="-62" width="5" height="6" fill="#1d1d1d"/><rect x="3" y="-62" width="5" height="6" fill="#1d1d1d"/>
+    <rect x="-18" y="-44" width="36" height="30" fill="#e05a47"/><rect x="-14" y="-14" width="12" height="14" fill="#3b3b4a"/><rect x="2" y="-14" width="12" height="14" fill="#3b3b4a"/>
+  </g>
+  <!-- blue character arriving -->
+  <g transform="translate(130 232)">
+    <rect x="-16" y="-70" width="32" height="26" fill="#f7d6b0"/><rect x="-18" y="-80" width="36" height="12" fill="#1f4c9a"/>
+    <rect x="-8" y="-62" width="5" height="6" fill="#1d1d1d"/><rect x="3" y="-62" width="5" height="6" fill="#1d1d1d"/>
+    <rect x="-18" y="-44" width="36" height="30" fill="#2f6fd6"/><rect x="-14" y="-14" width="12" height="14" fill="#3b3b4a"/><rect x="2" y="-14" width="12" height="14" fill="#3b3b4a"/>
+  </g>
+  <path d="M165 150 Q 230 80 295 140" stroke="#1d2a44" stroke-width="8" fill="none" stroke-linecap="round"/>
+  <path d="M282 118 L 300 145 L 272 144 Z" fill="#1d2a44"/>
+  <text x="325" y="300" font-size="46" text-anchor="middle" fill="#1d2a44" font-family="sans-serif" font-weight="bold">?</text>
+</svg>

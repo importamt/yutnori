@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400">
+  <rect width="640" height="400" fill="#f6efdf"/>
+  <rect x="150" y="40" width="340" height="320" fill="#efe1c0" stroke="#7a5230" stroke-width="6"/>
+  <rect x="165" y="55" width="310" height="290" fill="none" stroke="#b5382c" stroke-width="3"/>
+  <g stroke="#b5382c" stroke-width="2" opacity=".5"><line x1="235" y1="55" x2="235" y2="345"/><line x1="305" y1="55" x2="305" y2="345"/><line x1="375" y1="55" x2="375" y2="345"/><line x1="445" y1="55" x2="445" y2="345"/></g>
+  <g font-family="serif" fill="#2b1d12" font-size="52" text-anchor="middle" writing-mode="tb">
+    <text x="410" y="90">訓民正音</text>
+    <text x="270" y="90" font-size="40">나라의</text>
+    <text x="200" y="90" font-size="40">말소리</text>
+  </g>
+  <g font-family="sans-serif" fill="#b5382c" font-size="34" text-anchor="middle"><text x="340" y="215">ㄱ ㄴ ㄷ</text><text x="340" y="260">ㅏ ㅗ ㅣ</text></g>
+  <rect x="440" y="290" width="36" height="36" fill="#b5382c"/><text x="458" y="317" font-size="22" text-anchor="middle" fill="#fff" font-family="serif">印</text>
+</svg>

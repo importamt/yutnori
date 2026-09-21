@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400">
+  <rect width="640" height="400" fill="#f6efdf"/>
+  <path d="M220 150 Q 160 200 170 300 Q 180 360 320 360 Q 460 360 470 300 Q 480 200 420 150 Z" fill="#c0392b" stroke="#7f1d14" stroke-width="5"/>
+  <path d="M235 150 Q 320 175 405 150 L 395 120 Q 320 145 245 120 Z" fill="#e6b422" stroke="#7f1d14" stroke-width="4"/>
+  <g stroke="#2f5d8a" stroke-width="10" fill="none" stroke-linecap="round"><path d="M300 125 q 20 -40 40 0"/><path d="M280 130 q 40 -70 80 0"/></g>
+  <circle cx="320" cy="260" r="46" fill="#e6b422" stroke="#7f1d14" stroke-width="4"/>
+  <text x="320" y="276" font-size="44" text-anchor="middle" fill="#7f1d14" font-family="serif" font-weight="bold">福</text>
+  <g fill="#f6efdf"><rect x="490" y="220" width="90" height="46" rx="6" stroke="#2f5d8a" stroke-width="3"/><rect x="505" y="205" width="90" height="46" rx="6" stroke="#2f5d8a" stroke-width="3"/></g>
+  <text x="550" y="238" font-size="18" text-anchor="middle" fill="#2f5d8a" font-family="serif">₩</text>
+</svg>

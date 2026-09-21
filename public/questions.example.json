@@ -1,0 +1,16 @@
+[
+  {
+    "id": "q1",
+    "text": "여기에 문제 내용을 적습니다. 사진은 public/quiz/ 폴더에 넣고 경로를 image 에 적으세요.",
+    "image": "quiz/q3-taegeuk.svg",
+    "choices": ["보기 1", "보기 2", "보기 3", "보기 4"],
+    "answer": 0,
+    "explanation": "정답 공개 시 보여줄 해설 (선택)"
+  },
+  {
+    "id": "q2",
+    "text": "이미지 없는 문제 예시. 보기는 3~6개.",
+    "choices": ["A", "B", "C"],
+    "answer": 2
+  }
+]

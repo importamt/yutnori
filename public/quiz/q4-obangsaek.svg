@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 300">
+  <rect width="640" height="300" fill="#f6efdf"/>
+  <g font-family="serif" font-size="26" text-anchor="middle" fill="#2b1d12">
+    <rect x="30" y="60" width="100" height="140" rx="14" fill="#2f5d8a" stroke="#2b1d12" stroke-width="3"/><text x="80" y="240">청 · 東</text>
+    <rect x="150" y="60" width="100" height="140" rx="14" fill="#b5382c" stroke="#2b1d12" stroke-width="3"/><text x="200" y="240">적 · 南</text>
+    <rect x="270" y="60" width="100" height="140" rx="14" fill="#e6b422" stroke="#2b1d12" stroke-width="3"/><text x="320" y="240">황 · 中</text>
+    <rect x="390" y="60" width="100" height="140" rx="14" fill="#f7f2e8" stroke="#2b1d12" stroke-width="3"/><text x="440" y="240">백 · 西</text>
+    <rect x="510" y="60" width="100" height="140" rx="14" fill="#1d1a1a" stroke="#2b1d12" stroke-width="3"/><text x="560" y="240">흑 · 北</text>
+  </g>
+</svg>
