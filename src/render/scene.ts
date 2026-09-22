@@ -721,21 +721,24 @@ export class BoardScene {
       const female = (teamIndex + idx) % 2 === 0;
       const { group, body, hat } = this.makeCharacter(team.color, female);
       group.traverse((o) => (o.userData.pieceId = p.id));
-      // 차례 표식: 아래를 가리키는 노란 화살표 (기본 숨김)
+      // 차례 표식: 아래를 가리키는 복셀 화살표 — 위 막대 + 아래로 좁아지는 계단형 머리 (기본 숨김)
       const marker = new THREE.Group();
       const markerMat = new THREE.MeshStandardMaterial({ color: 0xf2c744, emissive: 0xb07f10, emissiveIntensity: 0.6, roughness: 0.6 });
+      const markerDark = new THREE.MeshStandardMaterial({ color: 0xe0a92a, emissive: 0x8a5f0a, emissiveIntensity: 0.5, roughness: 0.6 });
       const shaft = new THREE.Mesh(BOX, markerMat);
-      shaft.scale.set(0.12, 0.3, 0.12);
-      shaft.position.y = 0.3;
-      const head = new THREE.Mesh(BOX, markerMat);
-      head.scale.set(0.3, 0.14, 0.3);
-      head.position.y = 0.08;
-      const tip = new THREE.Mesh(BOX, markerMat);
-      tip.scale.set(0.16, 0.1, 0.16);
-      tip.position.y = -0.03;
-      marker.add(shaft, head, tip);
-      marker.scale.setScalar(1.7);
-      marker.position.y = 1.15;
+      shaft.scale.set(0.16, 0.42, 0.16);
+      shaft.position.y = 0.62;
+      marker.add(shaft);
+      // 머리: 넓은 층부터 좁은 층까지 5단 (아래가 뾰족)
+      const layers: Array<[number, number]> = [[0.62, 0.36], [0.5, 0.27], [0.38, 0.18], [0.26, 0.09], [0.14, 0.0]];
+      layers.forEach(([w, y], i) => {
+        const m = new THREE.Mesh(BOX, i % 2 ? markerDark : markerMat);
+        m.scale.set(w, 0.09, w);
+        m.position.y = y;
+        marker.add(m);
+      });
+      marker.scale.setScalar(1.25);
+      marker.position.y = 1.05;
       marker.visible = false;
       group.add(marker);
       // 발밑 노란 링
@@ -1104,8 +1107,8 @@ export class BoardScene {
       const footRing = v.marker.userData.footRing as THREE.Mesh | undefined;
       if (footRing) footRing.visible = isTurn;
       if (isTurn) {
-        v.marker.position.y = 1.15 + Math.abs(Math.sin(elapsed * 4)) * 0.22;
-        v.marker.rotation.y = elapsed * 2;
+        v.marker.position.y = 1.05 + Math.abs(Math.sin(elapsed * 4)) * 0.22;
+        v.marker.rotation.y = elapsed * 1.5;
         if (footRing) {
           const sc = 1 + Math.sin(elapsed * 4) * 0.12;
           footRing.scale.set(sc, sc, 1);
