@@ -66,6 +66,8 @@ interface PieceView {
   group: THREE.Group;
   body: THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial>;
   hat: THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial>;
+  /** 현재 차례 표식 (머리 위 화살표) */
+  marker: THREE.Group;
   teamId: string;
   color: string;
 }
@@ -719,8 +721,35 @@ export class BoardScene {
       const female = (teamIndex + idx) % 2 === 0;
       const { group, body, hat } = this.makeCharacter(team.color, female);
       group.traverse((o) => (o.userData.pieceId = p.id));
+      // 차례 표식: 아래를 가리키는 노란 화살표 (기본 숨김)
+      const marker = new THREE.Group();
+      const markerMat = new THREE.MeshStandardMaterial({ color: 0xf2c744, emissive: 0xb07f10, emissiveIntensity: 0.6, roughness: 0.6 });
+      const shaft = new THREE.Mesh(BOX, markerMat);
+      shaft.scale.set(0.12, 0.3, 0.12);
+      shaft.position.y = 0.3;
+      const head = new THREE.Mesh(BOX, markerMat);
+      head.scale.set(0.3, 0.14, 0.3);
+      head.position.y = 0.08;
+      const tip = new THREE.Mesh(BOX, markerMat);
+      tip.scale.set(0.16, 0.1, 0.16);
+      tip.position.y = -0.03;
+      marker.add(shaft, head, tip);
+      marker.scale.setScalar(1.7);
+      marker.position.y = 1.15;
+      marker.visible = false;
+      group.add(marker);
+      // 발밑 노란 링
+      const ringMat = new THREE.MeshBasicMaterial({ color: 0xf2c744, transparent: true, opacity: 0.85, side: THREE.DoubleSide });
+      const footRing = new THREE.Mesh(new THREE.RingGeometry(0.3, 0.4, 4), ringMat);
+      footRing.rotation.x = -Math.PI / 2;
+      footRing.rotation.z = Math.PI / 4;
+      footRing.position.y = 0.012;
+      footRing.userData.footRing = true;
+      marker.userData.footRing = footRing;
+      group.add(footRing);
+      footRing.visible = false;
       this.scene.add(group);
-      this.pieces.set(p.id, { group, body, hat, teamId: p.teamId, color: team.color });
+      this.pieces.set(p.id, { group, body, hat, marker, teamId: p.teamId, color: team.color });
     }
   }
 
@@ -1065,9 +1094,22 @@ export class BoardScene {
       } else {
         if (this.currentTeamId && v.teamId === this.currentTeamId) {
           mat.emissive.set(v.color);
-          mat.emissiveIntensity = 0.2 + Math.sin(elapsed * 3) * 0.1;
+          mat.emissiveIntensity = 0.45 + Math.sin(elapsed * 3) * 0.25;
         } else mat.emissiveIntensity = 0;
         if (!this.animating) v.group.position.y = this.restY(id);
+      }
+      // 현재 차례 팀의 말 머리 위 화살표: 통통 뛰며 회전
+      const isTurn = !!this.currentTeamId && v.teamId === this.currentTeamId && !this.isDone(id);
+      v.marker.visible = isTurn;
+      const footRing = v.marker.userData.footRing as THREE.Mesh | undefined;
+      if (footRing) footRing.visible = isTurn;
+      if (isTurn) {
+        v.marker.position.y = 1.15 + Math.abs(Math.sin(elapsed * 4)) * 0.22;
+        v.marker.rotation.y = elapsed * 2;
+        if (footRing) {
+          const sc = 1 + Math.sin(elapsed * 4) * 0.12;
+          footRing.scale.set(sc, sc, 1);
+        }
       }
     }
     for (const [tid, tv] of this.teams) {
@@ -1088,6 +1130,10 @@ export class BoardScene {
 
     this.controls.update();
     this.renderer.render(this.scene, this.camera);
+  }
+
+  private isDone(id: string): boolean {
+    return this.lastState?.pieces.find((p) => p.id === id)?.done ?? false;
   }
 
   private restYs = new Map<string, number>();
