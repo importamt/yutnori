@@ -18,7 +18,9 @@ function crisp(t: THREE.CanvasTexture): THREE.CanvasTexture {
   return t;
 }
 
+/** 1~3위 금·은·동, 4위부터는 돌색 */
 const RANK_COLORS = ['#f2c744', '#d9dde3', '#d08a4a'];
+const RANK_STONE = '#8a8a92';
 
 /** 팀 이름 간판 (픽셀 폰트, 팀 색 테두리). rank 가 있으면 오른쪽에 순위 배지 */
 export function signTexture(name: string, color: string, rank: number | null = null, w = 512, h = 160): THREE.CanvasTexture {
@@ -47,7 +49,7 @@ export function signTexture(name: string, color: string, rank: number | null = n
   ctx.fillText(name, 108, h / 2 + 4);
   if (rank) {
     const bx = w - 28 - badgeW + 8;
-    const badge = RANK_COLORS[rank - 1] ?? '#f2c744';
+    const badge = RANK_COLORS[rank - 1] ?? RANK_STONE;
     ctx.fillStyle = badge;
     ctx.fillRect(bx, 34, badgeW - 16, h - 68);
     ctx.fillStyle = '#1e0f17';

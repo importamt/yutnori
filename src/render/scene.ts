@@ -612,10 +612,11 @@ export class BoardScene {
       // 완주 팀: 팻말 위 금/은/동 트로피 큐브
       const trophy = new THREE.Group();
       if (rank) {
-        const medal = [0xf2c744, 0xd9dde3, 0xd08a4a][rank - 1] ?? 0xf2c744;
+        // 1~3위 금·은·동, 4위부터는 돌색
+        const medal = [0xf2c744, 0xd9dde3, 0xd08a4a][rank - 1] ?? 0x4b4b52;
         trophy.add(cube(medal, 0, 1.05, 0, 0.22, 0.22, 0.22));
         trophy.add(cube(medal, 0, 1.2, 0, 0.32, 0.08, 0.14, false));
-        trophy.add(cube(0x8e2a1f, 0, 0.9, 0, 0.1, 0.1, 0.1, false));
+        trophy.add(cube(rank <= 3 ? 0x8e2a1f : 0x2a2a30, 0, 0.9, 0, 0.1, 0.1, 0.1, false));
         trophy.position.set(side * SIGN_X, 0, rowZ + 0.2);
         trophy.userData.bobBase = 1;
       }
