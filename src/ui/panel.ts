@@ -1,4 +1,4 @@
-import { combinedSteps, currentTeam, movableOptions, type AdminDest, type GameState, type MoveOption, type Team } from '../game/engine';
+import { combinedSteps, currentTeam, isTeamFinished, movableOptions, type AdminDest, type GameState, type MoveOption, type Team } from '../game/engine';
 import { YUT_INFO, YUT_ORDER, type YutResult } from '../game/yut';
 import type { MusicSource } from '../audio/engine';
 import type { ViewPreset } from '../render/scene';
@@ -268,6 +268,12 @@ export class Panel {
   // ───────────── 팀 ─────────────
 
   private renderTeams(body: HTMLElement, s: GameState): void {
+    const order: string[] = [];
+    for (let i = 1; i <= s.teams.length; i++) {
+      const t = s.teams[(s.turnIndex + i) % s.teams.length];
+      if (!isTeamFinished(s, t.id)) order.push(t.name);
+    }
+    body.append(el('p', { class: 'hint' }, `다음 차례: ${order.slice(0, 4).join(' → ')}${order.length > 4 ? ' → …' : ''}`));
     const list = el('div', { class: 'team-list' });
     s.teams.forEach((t, i) => {
       const ps = s.pieces.filter((p) => p.teamId === t.id);

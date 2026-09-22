@@ -42,6 +42,8 @@ export class App {
   private questions: Question[] = SAMPLE_QUESTIONS;
   private busy = false;
   private panelHidden = false;
+  private lastEndTurnAt = 0;
+  private stateQueue: Promise<void> = Promise.resolve();
 
   constructor(private root: HTMLElement) {
     const stage = el('div', { class: 'stage' });
@@ -85,7 +87,9 @@ export class App {
       },
     });
 
-    this.store.subscribe((s, ev) => this.onState(s, ev));
+    this.store.subscribe((s, ev) => {
+      this.stateQueue = this.stateQueue.then(() => this.onState(s, ev)).catch(() => undefined);
+    });
     this.audio.onChange = () => this.refreshPanel();
     this.bindScene();
     this.bindKeys();
@@ -142,7 +146,8 @@ export class App {
         if (state.throwsLeft === 0 && state.pending.length === 1 && cur.options.length === 1) {
           // 더 던질 것도 없고, 결과도 하나, 움직일 수 있는 말도 하나뿐이면 클릭 없이 바로 이동
           const only = cur.options[0];
-          setTimeout(() => this.store.dispatch((s) => (s.phase === 'move' && s.pending.length === 1 ? applyMove(s, [0], only) : s)), 350);
+          const seq = state.seq;
+          setTimeout(() => this.store.dispatch((s) => (s.seq === seq && s.phase === 'move' && s.pending.length === 1 ? applyMove(s, [0], only) : s)), 350);
         }
       }
     }
@@ -240,7 +245,12 @@ export class App {
         this.quiz.close();
         this.store.undo();
       },
-      endTurn: () => d(adminEndTurn),
+      endTurn: () => {
+        const now = performance.now();
+        if (now - this.lastEndTurnAt < 800) return; // 더블클릭으로 두 팀 건너뛰는 것 방지
+        this.lastEndTurnAt = now;
+        d(adminEndTurn);
+      },
       adminMove: (pieceId: string, dest: Parameters<typeof adminMovePiece>[2]) => {
         d((s) => adminMovePiece(s, pieceId, dest));
         this.setAdminTool('none', null);
