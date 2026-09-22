@@ -1,5 +1,5 @@
 import type { Question } from '../game/quiz';
-import { clear, el } from './dom';
+import { clear, el, pouchIcon } from './dom';
 
 const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F'];
 
@@ -58,7 +58,7 @@ export class QuizModal {
       el(
         'div',
         { class: 'quiz-head' },
-        el('span', { class: 'quiz-badge' }, '퀴즈'),
+        el('span', { class: 'quiz-badge' }, pouchIcon(), '퀴즈'),
         el('span', { class: 'quiz-team', style: `--team:${teamColor}` }, el('i', { class: 'sq', style: `background:${teamColor}` }), teamName),
         el('span', { class: 'quiz-rule' }, '정답 +2 · 오답 -2'),
       ),

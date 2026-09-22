@@ -1,5 +1,5 @@
 import type { Team } from '../game/engine';
-import { clear, el } from './dom';
+import { clear, el, pouchIcon } from './dom';
 
 export interface SetupResult {
   teams: Team[];
@@ -71,7 +71,7 @@ export class SetupScreen {
     const card = el(
       'div',
       { class: 'setup-card rpg' },
-      el('div', { class: 'setup-title' }, el('h1', {}, '윷놀이'), el('p', { class: 'sub' }, '팀을 정하고 판을 펼치세요')),
+      el('div', { class: 'setup-title' }, el('div', { class: 'brand center' }, pouchIcon(), el('h1', {}, '한가위 윷놀이'), pouchIcon()), el('p', { class: 'sub' }, '팀을 정하고 판을 펼치세요')),
       this.opts.hasSave
         ? el(
             'div',

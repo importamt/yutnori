@@ -21,14 +21,14 @@ function crisp(t: THREE.CanvasTexture): THREE.CanvasTexture {
 /** 팀 이름 간판 (픽셀 폰트, 팀 색 테두리) */
 export function signTexture(name: string, color: string, w = 512, h = 160): THREE.CanvasTexture {
   const [c, ctx] = canvas(w, h);
-  ctx.fillStyle = '#1d2a44';
+  ctx.fillStyle = '#3a1f2e';
   ctx.fillRect(0, 0, w, h);
   ctx.fillStyle = color;
   ctx.fillRect(0, 0, w, 14);
   ctx.fillRect(0, h - 14, w, 14);
-  ctx.fillStyle = '#fefefe';
+  ctx.fillStyle = '#f2c744';
   ctx.fillRect(14, 14, w - 28, h - 28);
-  ctx.fillStyle = '#1d2a44';
+  ctx.fillStyle = '#3a1f2e';
   ctx.fillRect(28, 28, w - 56, h - 56);
   ctx.fillStyle = color;
   ctx.fillRect(44, h / 2 - 22, 44, 44);

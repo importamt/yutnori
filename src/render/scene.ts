@@ -20,9 +20,9 @@ const SIGN_X = 4.5;
 const HOP_MS = 280;
 
 const C = {
-  grassA: 0x63c24a,
-  grassB: 0x58b342,
-  grassC: 0x6fcd54,
+  grassA: 0x8fbf4f,
+  grassB: 0x7fae45,
+  grassC: 0xa3c95a,
   plazaA: 0xd8d2c0,
   plazaB: 0xcbc5b2,
   sand: 0xe6d38f,
@@ -36,6 +36,19 @@ const C = {
   trunk: 0x8b5a2b,
   leafA: 0x3fae3a,
   leafB: 0x56c44a,
+  mapleA: 0xd9472b,
+  mapleB: 0xe8663a,
+  ginkgo: 0xf2c744,
+  orangeLeaf: 0xf08a3c,
+  persimmon: 0xf07a2a,
+  pouch: 0xc0392b,
+  pouchDark: 0x8e2a1f,
+  gold: 0xe6b422,
+  moon: 0xfff1b8,
+  cloud: 0xfff7ea,
+  hanbokWhite: 0xfbf3e4,
+  hair: 0x2a1c1a,
+  ribbon: 0xd9472b,
   water: 0x63b7f2,
   waterB: 0x7cc8f7,
   wall: 0xf1e2c6,
@@ -57,6 +70,7 @@ interface TeamView {
   sign: THREE.Group;
   signMat: THREE.MeshBasicMaterial;
   ring: THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial>;
+  pouch: THREE.Group;
   side: -1 | 1;
   rowZ: number;
   name: string;
@@ -147,7 +161,7 @@ export class BoardScene {
     this.controls.maxPolarAngle = Math.PI / 2 - 0.15;
     this.controls.target.set(0, 0, 0.3);
 
-    this.scene.fog = new THREE.Fog(0xbfe9f7, 26, 48);
+    this.scene.fog = new THREE.Fog(0xf3d9b8, 26, 50);
     this.buildLights();
     this.buildGround();
     this.buildBoard();
@@ -176,8 +190,8 @@ export class BoardScene {
   // ───────────── 구축 ─────────────
 
   private buildLights(): void {
-    this.scene.add(new THREE.HemisphereLight(0xdff4ff, 0x6fa85a, 0.9));
-    const sun = new THREE.DirectionalLight(0xfff6e0, 1.9);
+    this.scene.add(new THREE.HemisphereLight(0xffe9cf, 0x8a9a4a, 0.9));
+    const sun = new THREE.DirectionalLight(0xffe2b8, 1.9);
     sun.position.set(8, 14, 6);
     sun.castShadow = true;
     sun.shadow.mapSize.set(2048, 2048);
@@ -296,17 +310,58 @@ export class BoardScene {
     }
   }
 
-  private tree(x: number, z: number, scale = 1): void {
+  /** 단풍 나무: palette 0 = 빨강 단풍, 1 = 주황, 2 = 은행 노랑, 3 = 아직 푸른 잎 */
+  private tree(x: number, z: number, scale = 1, palette = 0): void {
+    const sets: Array<[number, number]> = [
+      [C.mapleA, C.mapleB],
+      [C.orangeLeaf, C.mapleB],
+      [C.ginkgo, 0xf7d65a],
+      [C.leafA, C.leafB],
+    ];
+    const [a, b] = sets[palette % sets.length];
     const g = new THREE.Group();
     g.add(cube(C.trunk, 0, 0.45 * scale, 0, 0.42 * scale, 0.9 * scale, 0.42 * scale));
-    const leaf = (dx: number, dy: number, dz: number, s: number, c: number) => g.add(cube(c, dx * scale, dy * scale, dz * scale, s * scale, s * scale, s * scale));
-    leaf(0, 1.35, 0, 1.15, C.leafA);
-    leaf(0.55, 1.2, 0.2, 0.7, C.leafB);
-    leaf(-0.5, 1.35, -0.25, 0.7, C.leafB);
-    leaf(0.1, 2.05, -0.1, 0.75, C.leafB);
-    leaf(-0.2, 1.3, 0.55, 0.6, C.leafA);
+    const leaf = (dx: number, dy: number, dz: number, sz: number, c: number) => g.add(cube(c, dx * scale, dy * scale, dz * scale, sz * scale, sz * scale, sz * scale));
+    leaf(0, 1.35, 0, 1.15, a);
+    leaf(0.55, 1.2, 0.2, 0.7, b);
+    leaf(-0.5, 1.35, -0.25, 0.7, b);
+    leaf(0.1, 2.05, -0.1, 0.75, b);
+    leaf(-0.2, 1.3, 0.55, 0.6, a);
     g.position.set(x, 0, z);
     this.scene.add(g);
+  }
+
+  /** 감나무: 짙은 잎 + 주황 감 */
+  private persimmonTree(x: number, z: number, scale = 1): void {
+    const g = new THREE.Group();
+    g.add(cube(C.trunk, 0, 0.5 * scale, 0, 0.4 * scale, 1.0 * scale, 0.4 * scale));
+    const leaf = (dx: number, dy: number, dz: number, sz: number, c: number) => g.add(cube(c, dx * scale, dy * scale, dz * scale, sz * scale, sz * scale, sz * scale));
+    leaf(0, 1.4, 0, 1.1, 0x5c8a3a);
+    leaf(0.5, 1.3, 0.3, 0.65, 0x6f9c44);
+    leaf(-0.5, 1.5, -0.2, 0.65, 0x6f9c44);
+    const fruits: Array<[number, number, number]> = [[0.45, 1.05, 0.5], [-0.5, 1.2, 0.45], [0.2, 1.8, 0.5], [-0.15, 1.0, -0.55], [0.6, 1.6, -0.35]];
+    for (const [fx, fy, fz] of fruits) g.add(cube(C.persimmon, fx * scale, fy * scale, fz * scale, 0.22 * scale, 0.22 * scale, 0.22 * scale, false));
+    g.position.set(x, 0, z);
+    this.scene.add(g);
+  }
+
+  /** 복주머니 소품 */
+  private pouch(x: number, z: number, scale = 1): void {
+    const g = new THREE.Group();
+    this.pouchInto(g, scale);
+    g.rotation.y = 0.2;
+    g.position.set(x, 0, z);
+    this.scene.add(g);
+  }
+
+  private pouchInto(g: THREE.Group, scale: number): void {
+    g.add(cube(C.pouch, 0, 0.26 * scale, 0, 0.5 * scale, 0.42 * scale, 0.36 * scale));
+    g.add(cube(C.pouchDark, 0, 0.06 * scale, 0, 0.42 * scale, 0.12 * scale, 0.3 * scale));
+    g.add(cube(C.pouch, 0, 0.52 * scale, 0, 0.34 * scale, 0.14 * scale, 0.26 * scale));
+    g.add(cube(C.gold, 0, 0.5 * scale, 0, 0.4 * scale, 0.06 * scale, 0.3 * scale, false));
+    g.add(cube(C.gold, -0.14 * scale, 0.66 * scale, 0, 0.08 * scale, 0.22 * scale, 0.08 * scale, false));
+    g.add(cube(C.gold, 0.14 * scale, 0.66 * scale, 0, 0.08 * scale, 0.22 * scale, 0.08 * scale, false));
+    g.add(cube(C.gold, 0, 0.3 * scale, 0.19 * scale, 0.14 * scale, 0.14 * scale, 0.02 * scale, false));
   }
 
   private house(x: number, z: number, rotY: number): void {
@@ -324,12 +379,14 @@ export class BoardScene {
   }
 
   private buildScenery(): void {
-    // 나무들 (카메라에 보이는 외곽)
-    const trees: Array<[number, number, number]> = [
-      [-9.6, 2.2, 1.1], [-8.4, 4.6, 0.9], [-10.4, -0.6, 1.0], [9.8, 2.6, 1.1], [8.6, 4.8, 0.9], [10.6, -1.0, 1.0],
-      [-6.4, -6.2, 1.0], [-2.2, -6.6, 1.1], [3.0, -6.4, 0.9], [6.8, -6.3, 1.0], [-4.2, 6.4, 0.8], [5.2, 6.5, 0.85],
+    // 단풍 나무들 (카메라에 보이는 외곽)
+    const trees: Array<[number, number, number, number]> = [
+      [-9.6, 2.2, 1.1, 0], [-8.4, 4.6, 0.9, 2], [-10.4, -0.6, 1.0, 1], [9.8, 2.6, 1.1, 1], [8.6, 4.8, 0.9, 0], [10.6, -1.0, 1.0, 2],
+      [-6.4, -6.2, 1.0, 2], [-2.2, -6.6, 1.1, 0], [3.0, -6.4, 0.9, 3], [6.8, -6.3, 1.0, 1], [-4.2, 6.4, 0.8, 1], [5.2, 6.5, 0.85, 0],
     ];
-    for (const [x, z, s] of trees) this.tree(x, z, s);
+    for (const [x, z, sc, pal] of trees) this.tree(x, z, sc, pal);
+    this.persimmonTree(-11.2, 3.6, 1.0);
+    this.persimmonTree(11.4, 4.2, 1.0);
     // 집 두 채
     this.house(-9.2, -6.0, 0.3);
     this.house(9.4, -5.6, -0.4);
@@ -339,19 +396,50 @@ export class BoardScene {
     }
     this.scene.add(cube(C.fence, 0, 0.42, -7.2, 11.4, 0.1, 0.08));
     this.scene.add(cube(C.fence, 0, 0.2, -7.2, 11.4, 0.1, 0.08));
-    // 꽃/돌 소품
+    // 울타리 위 복주머니 장식
+    for (const x of [-4.5, 0, 4.5]) this.pouch(x, -7.2, 0.9);
+
+    // 한가위 보름달 + 구름 (멀리, 안개 영향 없음)
+    const moon = new THREE.Mesh(new THREE.CircleGeometry(3.2, 8), new THREE.MeshBasicMaterial({ color: C.moon, fog: false }));
+    moon.position.set(-6, 15, -34);
+    this.scene.add(moon);
+    const glow = new THREE.Mesh(new THREE.CircleGeometry(4.2, 8), new THREE.MeshBasicMaterial({ color: 0xffe9a8, transparent: true, opacity: 0.35, fog: false }));
+    glow.position.set(-6, 15, -34.2);
+    this.scene.add(glow);
+    for (const [cx, cy, cz, w] of [[4, 12.5, -33, 4.5], [-13, 11, -33, 3.5], [12, 14.5, -34, 3]] as Array<[number, number, number, number]>) {
+      const c = new THREE.Mesh(BOX, new THREE.MeshBasicMaterial({ color: C.cloud, fog: false }));
+      c.position.set(cx, cy, cz);
+      c.scale.set(w, 0.9, 0.5);
+      this.scene.add(c);
+      const c2 = new THREE.Mesh(BOX, new THREE.MeshBasicMaterial({ color: C.cloud, fog: false }));
+      c2.position.set(cx + w * 0.2, cy + 0.6, cz);
+      c2.scale.set(w * 0.5, 0.8, 0.5);
+      this.scene.add(c2);
+    }
+
+    // 낙엽 + 국화/들꽃 소품
     let seed = 5;
     const rnd = () => {
       seed = (seed * 1103515245 + 12345) & 0x7fffffff;
       return seed / 0x7fffffff;
     };
-    const flowerColors = [0xff6b8a, 0xffd75e, 0xffffff, 0xff9a3c];
-    for (let i = 0; i < 40; i++) {
+    const leafColors = [C.mapleA, C.orangeLeaf, C.ginkgo, C.mapleB];
+    for (let i = 0; i < 70; i++) {
+      const x = (rnd() - 0.5) * 24;
+      const z = (rnd() - 0.5) * 15;
+      if (Math.abs(x) < 8.2 && Math.abs(z) < 5.0) continue;
+      if (x < -8 && z < -3) continue;
+      const leaf = cube(leafColors[i % leafColors.length], x, 0.04, z, 0.22, 0.06, 0.16, false);
+      leaf.rotation.y = rnd() * Math.PI;
+      this.scene.add(leaf);
+    }
+    const flowerColors = [0xf2c744, 0xffffff, 0xf08a3c, 0xd9472b];
+    for (let i = 0; i < 24; i++) {
       const x = (rnd() - 0.5) * 22;
       const z = (rnd() - 0.5) * 14;
-      if (Math.abs(x) < 7.9 && Math.abs(z) < 4.9) continue;
+      if (Math.abs(x) < 8.2 && Math.abs(z) < 5.0) continue;
       if (x < -8 && z < -3) continue;
-      this.scene.add(cube(0x3f9c37, x, 0.1, z, 0.1, 0.2, 0.1, false));
+      this.scene.add(cube(0x5c8a3a, x, 0.1, z, 0.1, 0.2, 0.1, false));
       this.scene.add(cube(flowerColors[i % flowerColors.length], x, 0.24, z, 0.18, 0.12, 0.18, false));
     }
   }
@@ -369,6 +457,7 @@ export class BoardScene {
     for (const v of this.teams.values()) {
       this.scene.remove(v.sign);
       this.scene.remove(v.ring);
+      this.scene.remove(v.pouch);
     }
     this.teams.clear();
 
@@ -384,7 +473,7 @@ export class BoardScene {
       // 간판: 기둥 + 판 (판 안쪽 옆에 세워 앞줄 말을 가리지 않게)
       const sign = new THREE.Group();
       const signMat = new THREE.MeshBasicMaterial({ map: signTexture(t.name, t.color) });
-      const board = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.48, 0.08), [flat(0x1d2a44), flat(0x1d2a44), flat(0x1d2a44), flat(0x1d2a44), signMat, flat(0x1d2a44)]);
+      const board = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.48, 0.08), [flat(0x3a1f2e), flat(0x3a1f2e), flat(0x3a1f2e), flat(0x3a1f2e), signMat, flat(0x3a1f2e)]);
       board.position.set(0, 0.5, 0);
       board.castShadow = true;
       sign.add(board);
@@ -401,60 +490,58 @@ export class BoardScene {
       );
       ring.position.set(side * (TRAY_X + 0.55), 0.015, rowZ + 0.25);
       this.scene.add(ring);
-      this.teams.set(t.id, { sign, signMat, ring, side, rowZ, name: t.name, color: t.color });
+      const pouch = new THREE.Group();
+      this.pouchInto(pouch, 0.8);
+      pouch.position.set(side * (TRAY_X + 1.45), 0, rowZ - 0.4);
+      this.scene.add(pouch);
+      this.teams.set(t.id, { sign, signMat, ring, pouch, side, rowZ, name: t.name, color: t.color });
     });
   }
 
-  /** 복셀 캐릭터 말 */
+  /** 한복 차림 복셀 캐릭터 말: 흰 저고리 + 팀 색 치마/깃/고름, 검은 머리 + 댕기 */
   private makeCharacter(color: string): { group: THREE.Group; body: PieceView['body']; hat: PieceView['hat'] } {
     const g = new THREE.Group();
     const c = new THREE.Color(color);
-    const dark = c.clone().multiplyScalar(0.7);
-    const bodyMat = new THREE.MeshStandardMaterial({ color: c, roughness: 0.9 });
-    const hatMat = new THREE.MeshStandardMaterial({ color: dark, roughness: 0.9 });
+    const dark = c.clone().multiplyScalar(0.72);
+    const skirtMat = new THREE.MeshStandardMaterial({ color: c, roughness: 0.9 });
+    const trimMat = new THREE.MeshStandardMaterial({ color: dark, roughness: 0.9 });
+    const jeogori = flat(C.hanbokWhite);
     const skin = flat(0xf7d6b0);
-    const legs = flat(0x3b3b4a);
-    const leg = (dx: number) => {
-      const m = new THREE.Mesh(BOX, legs);
-      m.scale.set(0.11, 0.14, 0.12);
-      m.position.set(dx, 0.07, 0);
-      m.castShadow = true;
+    const shoes = flat(0x2f2a3a);
+    const box = (mat: THREE.Material, x: number, y: number, z: number, sx: number, sy: number, sz: number, shadow = true) => {
+      const m = new THREE.Mesh(BOX, mat);
+      m.position.set(x, y, z);
+      m.scale.set(sx, sy, sz);
+      m.castShadow = shadow;
       g.add(m);
+      return m;
     };
-    leg(-0.08);
-    leg(0.08);
-    const body = new THREE.Mesh(BOX, bodyMat);
-    body.scale.set(0.32, 0.22, 0.24);
-    body.position.set(0, 0.25, 0);
-    body.castShadow = true;
-    g.add(body);
-    const arm = (dx: number) => {
-      const m = new THREE.Mesh(BOX, bodyMat);
-      m.scale.set(0.08, 0.2, 0.1);
-      m.position.set(dx, 0.25, 0);
-      m.castShadow = true;
-      g.add(m);
-    };
-    arm(-0.2);
-    arm(0.2);
-    const head = new THREE.Mesh(BOX, skin);
-    head.scale.set(0.3, 0.26, 0.28);
-    head.position.set(0, 0.5, 0);
-    head.castShadow = true;
-    g.add(head);
+    // 신발 (버선코)
+    box(shoes, -0.09, 0.03, 0.04, 0.12, 0.06, 0.16);
+    box(shoes, 0.09, 0.03, 0.04, 0.12, 0.06, 0.16);
+    // 치마: 아래가 넓게 두 단
+    const skirt = box(skirtMat, 0, 0.13, 0, 0.4, 0.16, 0.34) as PieceView['body'];
+    box(skirtMat, 0, 0.27, 0, 0.34, 0.12, 0.28);
+    // 저고리 (흰색) + 깃/고름 (팀 색)
+    box(jeogori, 0, 0.4, 0, 0.32, 0.16, 0.26);
+    box(trimMat, 0, 0.42, 0.135, 0.06, 0.14, 0.02, false); // 깃
+    box(trimMat, 0.07, 0.36, 0.14, 0.05, 0.1, 0.02, false); // 고름
+    // 팔 (흰 소매, 팀 색 끝동)
+    box(jeogori, -0.21, 0.4, 0, 0.1, 0.16, 0.12);
+    box(jeogori, 0.21, 0.4, 0, 0.1, 0.16, 0.12);
+    box(trimMat, -0.21, 0.32, 0, 0.11, 0.04, 0.13, false);
+    box(trimMat, 0.21, 0.32, 0, 0.04 + 0.07, 0.04, 0.13, false);
+    // 머리
+    box(skin, 0, 0.62, 0, 0.3, 0.26, 0.28);
     const face = new THREE.Mesh(new THREE.PlaneGeometry(0.28, 0.24), new THREE.MeshBasicMaterial({ map: this.faceTex, transparent: true }));
-    face.position.set(0, 0.5, 0.145);
+    face.position.set(0, 0.62, 0.145);
     g.add(face);
-    const hat = new THREE.Mesh(BOX, hatMat);
-    hat.scale.set(0.34, 0.1, 0.32);
-    hat.position.set(0, 0.66, 0);
-    hat.castShadow = true;
-    g.add(hat);
-    const hatTop = new THREE.Mesh(BOX, hatMat);
-    hatTop.scale.set(0.24, 0.1, 0.22);
-    hatTop.position.set(0, 0.75, 0);
-    g.add(hatTop);
-    return { group: g, body, hat };
+    // 검은 머리 + 댕기 (뒤로 늘어진 팀 색 리본)
+    const hair = box(flat(C.hair), 0, 0.76, 0, 0.32, 0.1, 0.3) as PieceView['hat'];
+    box(flat(C.hair), 0, 0.68, -0.13, 0.32, 0.12, 0.05, false);
+    box(trimMat, 0, 0.5, -0.17, 0.08, 0.3, 0.03, false); // 댕기
+    box(flat(C.gold), 0, 0.8, 0, 0.1, 0.05, 0.1, false); // 배씨댕기 장식
+    return { group: g, body: skirt, hat: hair };
   }
 
   private ensurePieces(state: GameState): void {
@@ -472,7 +559,6 @@ export class BoardScene {
         if (existing.color !== team.color) {
           const c = new THREE.Color(team.color);
           existing.body.material.color.copy(c);
-          existing.hat.material.color.copy(c.clone().multiplyScalar(0.7));
           existing.color = team.color;
         }
         continue;

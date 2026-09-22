@@ -55,3 +55,17 @@ export function readFileText(file: File): Promise<string> {
     r.readAsText(file);
   });
 }
+
+/** 픽셀 복주머니 아이콘 (inline SVG) */
+export function pouchIcon(): HTMLElement {
+  const wrap = el('span', { class: 'pouch-icon' });
+  wrap.innerHTML =
+    '<svg viewBox="0 0 16 16" width="100%" height="100%" shape-rendering="crispEdges">' +
+    '<rect x="6" y="1" width="1" height="2" fill="#f2c744"/><rect x="9" y="1" width="1" height="2" fill="#f2c744"/>' +
+    '<rect x="5" y="3" width="6" height="2" fill="#e8663a"/><rect x="4" y="5" width="8" height="1" fill="#f2c744"/>' +
+    '<rect x="3" y="6" width="10" height="7" fill="#d9472b"/><rect x="2" y="8" width="1" height="4" fill="#d9472b"/><rect x="13" y="8" width="1" height="4" fill="#d9472b"/>' +
+    '<rect x="4" y="13" width="8" height="2" fill="#8e2a1f"/>' +
+    '<rect x="7" y="8" width="2" height="3" fill="#f2c744"/><rect x="6" y="9" width="4" height="1" fill="#f2c744"/>' +
+    '</svg>';
+  return wrap;
+}

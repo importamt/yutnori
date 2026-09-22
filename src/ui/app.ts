@@ -24,7 +24,7 @@ import { GameStore } from '../game/store';
 import { YUT_INFO, type YutResult } from '../game/yut';
 import { BoardScene } from '../render/scene';
 import { SAMPLE_QUESTIONS } from '../data/sampleQuestions';
-import { append, clear, downloadText, el, readFileText } from './dom';
+import { append, clear, downloadText, el, pouchIcon, readFileText } from './dom';
 import { Panel } from './panel';
 import { QuizModal } from './quiz';
 import { SetupScreen } from './setup';
@@ -179,7 +179,7 @@ export class App {
     const ranks = s.finishOrder.map((tid, i) => el('span', { class: 'rank' }, `${['🥇', '🥈', '🥉'][i] ?? `${i + 1}위`} ${this.teamName(s, tid)}`));
     append(
       this.banner,
-      [el('div', { class: 'brand' }, el('h1', {}, '윷놀이')),
+      [el('div', { class: 'brand' }, pouchIcon(), el('h1', {}, '한가위 윷놀이')),
       el(
         'div',
         { class: 'turn', style: `--team:${team?.color ?? '#999'}` },
@@ -308,15 +308,25 @@ export class App {
     };
   }
 
+  private heldKeys = new Set<string>();
+  private lastHotkeyAt = 0;
+
   private bindKeys(): void {
+    window.addEventListener('keyup', (e) => this.heldKeys.delete(e.key));
+    window.addEventListener('blur', () => this.heldKeys.clear());
     window.addEventListener('keydown', (e) => {
       if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
       const target = e.target as HTMLElement;
       if (target && (target.tagName === 'INPUT' || target.tagName === 'SELECT' || target.tagName === 'TEXTAREA')) return;
       if (!this.store.current) return;
       const map: Record<string, YutResult> = { '1': 'do', '2': 'gae', '3': 'geol', '4': 'yut', '5': 'mo', b: 'backdo', B: 'backdo', '0': 'nak' };
-      if (map[e.key] && this.store.current.phase === 'throw') {
-        this.actions().throw(map[e.key]);
+      if (map[e.key]) {
+        // 키를 누르고 있는 동안의 반복 입력과 200ms 내 중복 입력은 한 번으로 취급 (실제 던지기는 1회씩)
+        const now = performance.now();
+        if (this.heldKeys.has(e.key) || now - this.lastHotkeyAt < 200) return;
+        this.heldKeys.add(e.key);
+        this.lastHotkeyAt = now;
+        if (this.store.current.phase === 'throw') this.actions().throw(map[e.key]);
         return;
       }
       if ((e.key === 'z' || e.key === 'Z') && !this.quiz.isOpen) {
