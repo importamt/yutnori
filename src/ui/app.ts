@@ -86,6 +86,13 @@ export class App {
     this.bindScene();
     this.bindKeys();
     this.loadQuestionFile();
+
+    // 저장된 게임이 있으면 바로 이어서 진행 (새 게임은 관리 > 새 게임)
+    if (saved) {
+      this.setup.hide();
+      this.store.restore(saved);
+      this.toast('이어서 진행', `${summarize(saved.state, saved.savedAt)}`, 'ok');
+    }
   }
 
   // ───────────── 상태 → 화면 ─────────────
@@ -148,6 +155,7 @@ export class App {
   private refreshPanel(): void {
     const s = this.store.current;
     if (!s) return;
+    this.panel.lastSavedAt = this.store.lastSavedAt;
     this.panel.update(
       s,
       {
@@ -251,6 +259,10 @@ export class App {
       },
       resetQuestions: () => d((s) => ({ ...s, usedQuestionIds: [], events: [], seq: s.seq + 1 })),
       exportState: () => downloadText(`yutnori-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.json`, this.store.exportJson()),
+      restoreCheckpoint: (index: number) => {
+        this.quiz.close();
+        if (!this.store.restoreCheckpoint(index)) alert('복구 지점을 찾을 수 없습니다.');
+      },
       importState: async (file: File) => {
         try {
           this.store.importJson(await readFileText(file));

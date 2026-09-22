@@ -6,9 +6,9 @@ export interface SetupResult {
   piecesPerTeam: number;
 }
 
-/** 개발국 팀 (Slack #org-* 채널 기준). 9번째부터는 예비 */
-const DEFAULT_NAMES = ['백엔드', 'API플랫폼', '서비스플랫폼', '계정플랫폼', '웹라이브', '웹코어', '앱서비스', '플레이어', 'QE', '데이터', '인프라', '디자인'];
-const DEFAULT_COLORS = ['#2f6fd6', '#e05a47', '#f7c02c', '#2f9c6a', '#7a4bd1', '#f08a3c', '#1fa9b8', '#c8508f', '#8b5a2b', '#e8e2d2', '#2d2a32', '#9ccc3c'];
+/** 행사 참여 팀 8개 (주인님 지정 순서). 9번째부터는 예비 */
+const DEFAULT_NAMES = ['플레이어', '앱서비스', 'API플랫폼', '서비스플랫폼', '유저플랫폼', '빌링플랫폼', '미디어', '인프라', '웹라이브', '웹코어', 'QE', '데이터'];
+const DEFAULT_COLORS = ['#c8508f', '#1fa9b8', '#e05a47', '#f7c02c', '#2f9c6a', '#7a4bd1', '#f08a3c', '#2f6fd6', '#8b5a2b', '#e8e2d2', '#2d2a32', '#9ccc3c'];
 
 export class SetupScreen {
   readonly root: HTMLElement;

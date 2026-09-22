@@ -1,7 +1,17 @@
 import type { GameEvent, GameState } from './engine';
 
 const SAVE_KEY = 'yutnori.save.v1';
+const CHECKPOINT_KEY = 'yutnori.checkpoints.v1';
 const MAX_HISTORY = 100;
+const MAX_CHECKPOINTS = 80;
+
+/** 액션마다 남기는 복구 지점 */
+export interface Checkpoint {
+  t: number;
+  seq: number;
+  label: string;
+  state: GameState;
+}
 
 export type Listener = (state: GameState, events: GameEvent[]) => void;
 
@@ -30,6 +40,8 @@ export class GameStore {
   private state: GameState | null = null;
   private history: GameState[] = [];
   private listeners = new Set<Listener>();
+  /** 마지막 자동 저장 시각 (ms). null = 저장 실패/미저장 */
+  lastSavedAt: number | null = null;
 
   get current(): GameState | null {
     return this.state;
@@ -77,6 +89,7 @@ export class GameStore {
     this.history = [];
     try {
       localStorage.removeItem(SAVE_KEY);
+      localStorage.removeItem(CHECKPOINT_KEY);
     } catch {
       /* storage unavailable */
     }
@@ -91,9 +104,54 @@ export class GameStore {
     if (!this.state) return;
     try {
       localStorage.setItem(SAVE_KEY, JSON.stringify(this.toSaveFile()));
+      this.lastSavedAt = Date.now();
     } catch {
-      /* storage unavailable or quota exceeded */
+      this.lastSavedAt = null;
     }
+    this.appendCheckpoint();
+  }
+
+  /** 모든 액션 뒤 체크포인트를 쌓는다 (최근 MAX_CHECKPOINTS 개). 용량 초과 시 오래된 것부터 버린다 */
+  private appendCheckpoint(): void {
+    if (!this.state) return;
+    const list = GameStore.listCheckpoints();
+    const last = this.state.log[this.state.log.length - 1];
+    const cp: Checkpoint = { t: Date.now(), seq: this.state.seq, label: last?.text ?? '', state: strip(this.state) };
+    // 같은 상태(seq)를 다시 저장하는 경우(새로고침 복원 등)는 덧쓴다
+    if (list.length && list[list.length - 1].seq === cp.seq) list[list.length - 1] = cp;
+    else list.push(cp);
+    while (list.length > MAX_CHECKPOINTS) list.shift();
+    for (let attempt = 0; attempt < 4; attempt++) {
+      try {
+        localStorage.setItem(CHECKPOINT_KEY, JSON.stringify(list));
+        return;
+      } catch {
+        list.splice(0, Math.ceil(list.length / 2));
+      }
+    }
+  }
+
+  static listCheckpoints(): Checkpoint[] {
+    try {
+      const raw = localStorage.getItem(CHECKPOINT_KEY);
+      const parsed = raw ? (JSON.parse(raw) as Checkpoint[]) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+
+  /** 체크포인트 시점으로 복구. 현재 상태는 되돌리기 이력에 남긴다 */
+  restoreCheckpoint(index: number): boolean {
+    const list = GameStore.listCheckpoints();
+    const cp = list[index];
+    if (!cp) return false;
+    if (this.state) this.history.push(strip(this.state));
+    this.state = { ...migrate(cp.state), events: [], seq: (this.state?.seq ?? cp.seq) + 1 };
+    this.state = { ...this.state, log: [...this.state.log, { t: Date.now(), text: `🛠 기록 복구: ${formatTime(cp.t)} 시점` }] };
+    this.persist();
+    this.emit([]);
+    return true;
   }
 
   toSaveFile(): SaveFile {
@@ -101,7 +159,7 @@ export class GameStore {
       version: 1,
       savedAt: Date.now(),
       state: strip(this.state!),
-      history: this.history.slice(-30),
+      history: this.history.slice(-MAX_HISTORY),
     };
   }
 
@@ -135,4 +193,10 @@ export class GameStore {
     }
     this.restore(parsed);
   }
+}
+
+export function formatTime(ms: number): string {
+  const d = new Date(ms);
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
 }

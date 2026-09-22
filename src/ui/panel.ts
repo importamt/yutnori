@@ -2,6 +2,7 @@ import { combinedSteps, currentTeam, movableOptions, type AdminDest, type GameSt
 import { YUT_INFO, YUT_ORDER, type YutResult } from '../game/yut';
 import type { MusicSource } from '../audio/engine';
 import type { ViewPreset } from '../render/scene';
+import { GameStore, formatTime } from '../game/store';
 import { clear, el } from './dom';
 
 export type Mode = 'play' | 'teams' | 'admin' | 'music';
@@ -28,6 +29,8 @@ export interface PanelActions {
   resetQuestions: () => void;
   exportState: () => void;
   importState: (file: File) => void;
+  /** 체크포인트(액션 기록) 시점으로 복구 */
+  restoreCheckpoint: (index: number) => void;
   newGame: () => void;
   setView: (v: ViewPreset) => void;
   /** 관리자 클릭 도구 변경 (판에서 말/칸/팻말을 클릭해 조작) */
@@ -70,6 +73,8 @@ export class Panel {
   private music: MusicView | null = null;
   private canUndo = false;
   private busy = false;
+  private checkpointIndex = -1;
+  lastSavedAt: number | null = null;
 
   constructor(parent: HTMLElement, private actions: PanelActions) {
     this.root = el('aside', { class: 'panel rpg' });
@@ -366,6 +371,25 @@ export class Panel {
         qSel,
         el('button', { class: 'pbtn primary', disabled: s.phase === 'quiz' || !s.questions.length, onClick: () => this.actions.adminQuiz(this.adminQuizQ || undefined) }, `${team?.name ?? ''}에게 노출`),
         el('p', { class: 'hint' }, '결과(+2/-2)는 현재 팀의 판 위 말이 하나일 때 자동 적용, 아니면 이동 없이 기록만.'),
+      ),
+    );
+
+    // 기록 복구: 액션마다 저장된 체크포인트 목록 (최신순)
+    const cps = GameStore.listCheckpoints();
+    const cpSel = el('select', { onChange: (e) => (this.checkpointIndex = Number((e.target as HTMLSelectElement).value)) });
+    cpSel.append(el('option', { value: '-1' }, `복구 지점 선택… (${cps.length}개)`));
+    for (let i = cps.length - 1; i >= 0; i--) {
+      const cp = cps[i];
+      cpSel.append(el('option', { value: String(i), selected: this.checkpointIndex === i }, `${formatTime(cp.t)} · ${cp.label.slice(0, 26)}`));
+    }
+    body.append(
+      el(
+        'div',
+        { class: 'box' },
+        el('div', { class: 'box-title' }, '기록 · 복구', el('span', { class: 'saved-at' }, this.lastSavedAt ? `자동 저장 ${formatTime(this.lastSavedAt)}` : '저장 안 됨')),
+        cpSel,
+        el('button', { class: 'pbtn', disabled: this.checkpointIndex < 0, onClick: () => { if (confirm('선택한 시점으로 되돌릴까요? (현재 상태는 되돌리기로 복원 가능)')) this.actions.restoreCheckpoint(this.checkpointIndex); } }, '이 시점으로 복구'),
+        el('p', { class: 'hint' }, '모든 행동은 즉시 이 브라우저에 저장되며, 새로고침하면 마지막 상태로 자동 복원됩니다.'),
       ),
     );
 
