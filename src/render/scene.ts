@@ -92,6 +92,8 @@ export interface SceneCallbacks {
   onNodeClick?: (nodeId: NodeId) => void;
   onTeamClick?: (teamId: string) => void;
   onOptionClick?: (index: number) => void;
+  /** 말 위에 마우스가 올라가거나(pieceId) 벗어날 때(null) */
+  onPieceHover?: (pieceId: string | null, x: number, y: number) => void;
   onHop?: () => void;
 }
 
@@ -963,9 +965,17 @@ export class BoardScene {
     }
   }
 
+  private hoveredPiece: string | null = null;
+
   private handleHover(e: PointerEvent): void {
     if (this.pointerDown) return;
     const hits = this.pick(e);
+    const pieceHit = hits.find((h) => typeof h.object.userData.pieceId === 'string');
+    const pieceId = pieceHit ? (pieceHit.object.userData.pieceId as string) : null;
+    if (pieceId !== this.hoveredPiece || pieceId) {
+      this.hoveredPiece = pieceId;
+      this.callbacks.onPieceHover?.(pieceId, e.clientX, e.clientY);
+    }
     const interactive = hits.some((h) => {
       const d = h.object.userData;
       return (
@@ -974,7 +984,7 @@ export class BoardScene {
         (this.adminMode && (typeof d.nodeId === 'string' || typeof d.teamId === 'string'))
       );
     });
-    this.renderer.domElement.style.cursor = interactive ? 'pointer' : 'grab';
+    this.renderer.domElement.style.cursor = interactive ? 'pointer' : pieceId ? 'help' : 'grab';
   }
 
   // ───────────── 루프 ─────────────
@@ -1009,6 +1019,12 @@ export class BoardScene {
 
     for (const [id, v] of this.pieces) {
       const mat = v.body.material;
+      if (id === this.hoveredPiece && !this.selectable.has(id) && id !== this.selectedPiece) {
+        mat.emissive.set(v.color);
+        mat.emissiveIntensity = 0.55;
+        if (!this.animating) v.group.position.y = this.restY(id) + 0.08;
+        continue;
+      }
       if (this.selectable.has(id) || id === this.selectedPiece) {
         mat.emissive.set(0xffffff);
         mat.emissiveIntensity = 0.3 + Math.sin(elapsed * 7) * 0.2;

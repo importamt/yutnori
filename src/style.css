@@ -68,6 +68,11 @@ body {
 .turn-phase { font-size: 13px; color: var(--yellow); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 380px; }
 .ranks { display: flex; flex-direction: column; gap: 2px; padding-left: 16px; border-left: 3px solid var(--navy-3); font-size: 13px; }
 
+/* 말 툴팁 */
+.tooltip { position: absolute; left: 0; top: 0; z-index: 8; padding: 8px 12px; pointer-events: none; min-width: 120px; max-width: 220px; }
+.tt-team { display: flex; align-items: center; gap: 8px; font-size: 16px; white-space: nowrap; }
+.tt-sub { font-size: 12px; color: var(--muted); margin-top: 2px; white-space: nowrap; }
+
 /* 토스트 */
 .toasts { position: absolute; left: 50%; top: 14%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 10px; pointer-events: none; }
 .toast {

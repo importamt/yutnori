@@ -38,6 +38,7 @@ export class App {
   private setup: SetupScreen;
   private banner: HTMLElement;
   private toastBox: HTMLElement;
+  private tooltip: HTMLElement;
   private questions: Question[] = SAMPLE_QUESTIONS;
   private busy = false;
   private panelHidden = false;
@@ -53,6 +54,9 @@ export class App {
     root.append(this.banner);
     this.toastBox = el('div', { class: 'toasts' });
     root.append(this.toastBox);
+    this.tooltip = el('div', { class: 'tooltip rpg hidden' });
+    root.append(this.tooltip);
+    stage.addEventListener('pointerleave', () => this.tooltip.classList.add('hidden'));
 
     this.panel = new Panel(root, this.actions());
     root.append(el('button', { class: 'panel-toggle rpg', title: '패널 펼치기 (Tab)', onClick: () => this.togglePanel() }, '▶ MENU'));
@@ -298,6 +302,7 @@ export class App {
   private bindScene(): void {
     this.scene.callbacks = {
       onHop: () => this.audio.sfxHop(),
+      onPieceHover: (pieceId, x, y) => this.showPieceTooltip(pieceId, x, y),
       onOptionClick: (i) => {
         const cur = this.panel.currentOptions();
         if (cur && cur.options[i] && !this.busy) this.store.dispatch((s) => applyMove(s, cur.indices, cur.options[i]));
@@ -329,6 +334,33 @@ export class App {
         if (this.panel.adminTool === 'teamPick') this.pickTeam(teamId);
       },
     };
+  }
+
+  /** 말 위에 마우스를 올리면 팀명·말 번호·위치를 보여준다 */
+  private showPieceTooltip(pieceId: string | null, x: number, y: number): void {
+    const s = this.store.current;
+    if (!pieceId || !s) {
+      this.tooltip.classList.add('hidden');
+      return;
+    }
+    const piece = s.pieces.find((p) => p.id === pieceId);
+    const team = piece && s.teams.find((t) => t.id === piece.teamId);
+    if (!piece || !team) {
+      this.tooltip.classList.add('hidden');
+      return;
+    }
+    const where = piece.done ? '완주' : piece.node === null ? '집(대기)' : piece.node === 'S' ? '출발점' : `${piece.node} 칸`;
+    const count = s.pieces.filter((p) => p.teamId === team.id).length;
+    clear(this.tooltip);
+    this.tooltip.append(
+      el('div', { class: 'tt-team' }, el('i', { class: 'sq', style: `background:${team.color}` }), team.name),
+      el('div', { class: 'tt-sub' }, `${count > 1 ? `${piece.id.split('-')[1]}번 말 · ` : ''}${where}${s.teams[s.turnIndex]?.id === team.id ? ' · 지금 차례' : ''}`),
+    );
+    this.tooltip.classList.remove('hidden');
+    const rect = this.root.getBoundingClientRect();
+    const left = Math.min(x - rect.left + 16, rect.width - 240);
+    const top = Math.max(8, y - rect.top - 64);
+    this.tooltip.style.transform = `translate(${left}px, ${top}px)`;
   }
 
   /** 현재 선택된 대기 결과 기준으로 판 위 목적지 표시를 다시 그린다 */
