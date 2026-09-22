@@ -139,9 +139,10 @@ export class App {
       const cur = this.panel.currentOptions();
       if (cur) {
         this.scene.showOptions(cur.options);
-        if (state.throwsLeft === 0 && state.pending.length === 1 && cur.options.length === 1 && cur.options[0].kind === 'enter') {
-          // 더 던질 것도 없고 선택지도 하나뿐이면 클릭 한 번 아끼도록 자동 이동
-          setTimeout(() => this.store.dispatch((s) => (s.phase === 'move' && s.pending.length === 1 ? applyMove(s, [0], cur.options[0]) : s)), 350);
+        if (state.throwsLeft === 0 && state.pending.length === 1 && cur.options.length === 1) {
+          // 더 던질 것도 없고, 결과도 하나, 움직일 수 있는 말도 하나뿐이면 클릭 없이 바로 이동
+          const only = cur.options[0];
+          setTimeout(() => this.store.dispatch((s) => (s.phase === 'move' && s.pending.length === 1 ? applyMove(s, [0], only) : s)), 350);
         }
       }
     }
