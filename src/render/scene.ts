@@ -726,19 +726,18 @@ export class BoardScene {
       const markerMat = new THREE.MeshStandardMaterial({ color: 0xf2c744, emissive: 0xb07f10, emissiveIntensity: 0.6, roughness: 0.6 });
       const markerDark = new THREE.MeshStandardMaterial({ color: 0xe0a92a, emissive: 0x8a5f0a, emissiveIntensity: 0.5, roughness: 0.6 });
       const shaft = new THREE.Mesh(BOX, markerMat);
-      shaft.scale.set(0.16, 0.42, 0.16);
-      shaft.position.y = 0.62;
+      shaft.scale.set(0.09, 0.3, 0.09);
+      shaft.position.y = 0.42;
       marker.add(shaft);
-      // 머리: 넓은 층부터 좁은 층까지 5단 (아래가 뾰족)
-      const layers: Array<[number, number]> = [[0.62, 0.36], [0.5, 0.27], [0.38, 0.18], [0.26, 0.09], [0.14, 0.0]];
+      // 머리: 캐릭터 폭(약 0.4) 수준에서 시작해 얇은 5단으로 좁아진다 (아래가 뾰족)
+      const layers: Array<[number, number]> = [[0.4, 0.24], [0.32, 0.18], [0.24, 0.12], [0.16, 0.06], [0.08, 0.0]];
       layers.forEach(([w, y], i) => {
         const m = new THREE.Mesh(BOX, i % 2 ? markerDark : markerMat);
-        m.scale.set(w, 0.09, w);
+        m.scale.set(w, 0.06, w);
         m.position.y = y;
         marker.add(m);
       });
-      marker.scale.setScalar(1.25);
-      marker.position.y = 1.05;
+      marker.position.y = 1.0;
       marker.visible = false;
       group.add(marker);
       // 발밑 노란 링
@@ -1107,7 +1106,7 @@ export class BoardScene {
       const footRing = v.marker.userData.footRing as THREE.Mesh | undefined;
       if (footRing) footRing.visible = isTurn;
       if (isTurn) {
-        v.marker.position.y = 1.05 + Math.abs(Math.sin(elapsed * 4)) * 0.22;
+        v.marker.position.y = 1.0 + Math.abs(Math.sin(elapsed * 4)) * 0.18;
         v.marker.rotation.y = elapsed * 1.5;
         if (footRing) {
           const sc = 1 + Math.sin(elapsed * 4) * 0.12;
