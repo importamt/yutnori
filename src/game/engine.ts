@@ -200,6 +200,11 @@ function advance(state: GameState): GameState {
   if (activeTeamCount(s) <= 1 && s.finishOrder.length > 0) {
     return { ...s, phase: 'finished', pending: [], events: [...s.events] };
   }
+  // 모든 말이 완주한 팀은 남은 결과·던지기가 있어도 차례를 넘긴다
+  if (isTeamFinished(s, currentTeam(s).id)) {
+    if (s.pending.length || s.throwsLeft > 0) s = withLog(s, `${currentTeam(s).name}: 모든 말 완주 — 남은 결과는 소멸됩니다.`);
+    return passTurn({ ...s, pending: [], throwsLeft: 0 });
+  }
   if (s.pending.length === 0 && s.throwsLeft === 0) return passTurn(s);
   return { ...s, phase: s.throwsLeft > 0 ? 'throw' : 'move' };
 }

@@ -210,6 +210,20 @@ describe('moving, catching and stacking', () => {
     expect(s.finishOrder).toEqual(['t1']);
   });
 
+  it('a team that finishes its last piece passes the turn even with results or throws left', () => {
+    let s = game(1);
+    s = placePiece(s, 't1-1', '18');
+    s = inputThrow(s, 'yut'); // 남은 던지기 +1
+    s = inputThrow(s, 'mo'); // 대기: 윷, 모 / 남은 던지기 1
+    expect(s.throwsLeft).toBe(1);
+    s = applyMove(s, [0], optFrom(s, ['yut'], '18')); // 18 + 4 → 완주
+    expect(s.pieces.find((p) => p.id === 't1-1')!.done).toBe(true);
+    expect(s.finishOrder).toEqual(['t1']);
+    expect(s.pending).toEqual([]);
+    expect(s.turnIndex).toBe(1);
+    expect(s.phase).toBe('throw');
+  });
+
   it('finished teams are skipped in turn order', () => {
     let s = game(1);
     s = placePiece(s, 't2-1', 'DONE');
