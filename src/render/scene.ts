@@ -726,14 +726,14 @@ export class BoardScene {
       const markerMat = new THREE.MeshStandardMaterial({ color: 0xf2c744, emissive: 0xb07f10, emissiveIntensity: 0.6, roughness: 0.6 });
       const markerDark = new THREE.MeshStandardMaterial({ color: 0xe0a92a, emissive: 0x8a5f0a, emissiveIntensity: 0.5, roughness: 0.6 });
       const shaft = new THREE.Mesh(BOX, markerMat);
-      shaft.scale.set(0.09, 0.3, 0.09);
-      shaft.position.y = 0.42;
+      shaft.scale.set(0.08, 0.34, 0.08);
+      shaft.position.y = 0.51;
       marker.add(shaft);
-      // 머리: 캐릭터 폭(약 0.4) 수준에서 시작해 얇은 5단으로 좁아진다 (아래가 뾰족)
-      const layers: Array<[number, number]> = [[0.4, 0.24], [0.32, 0.18], [0.24, 0.12], [0.16, 0.06], [0.08, 0.0]];
+      // 머리: 폭 0.22에서 시작해 5단으로 좁아지는 길쭉한 피라미드 (아래가 뾰족)
+      const layers: Array<[number, number]> = [[0.22, 0.3], [0.17, 0.225], [0.12, 0.15], [0.08, 0.075], [0.04, 0.0]];
       layers.forEach(([w, y], i) => {
         const m = new THREE.Mesh(BOX, i % 2 ? markerDark : markerMat);
-        m.scale.set(w, 0.06, w);
+        m.scale.set(w, 0.08, w);
         m.position.y = y;
         marker.add(m);
       });
@@ -1100,8 +1100,8 @@ export class BoardScene {
         } else mat.emissiveIntensity = 0;
         if (!this.animating) v.group.position.y = this.restY(id);
       }
-      // 현재 차례 팀의 말 머리 위 화살표: 통통 뛰며 회전
-      const isTurn = !!this.currentTeamId && v.teamId === this.currentTeamId && !this.isDone(id);
+      // 현재 차례 팀의 말 머리 위 화살표: 통통 뛰며 회전. 이동 연출 중에는 숨긴다
+      const isTurn = !this.animating && !!this.currentTeamId && v.teamId === this.currentTeamId && !this.isDone(id);
       v.marker.visible = isTurn;
       const footRing = v.marker.userData.footRing as THREE.Mesh | undefined;
       if (footRing) footRing.visible = isTurn;
