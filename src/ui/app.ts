@@ -124,13 +124,13 @@ export class App {
   private afterState(state: GameState, events: GameEvent[]): void {
     this.refreshPanel();
     this.scene.clearHighlights();
-    if (state.phase === 'move') {
+    if ((state.phase === 'move' || state.phase === 'throw') && state.pending.length) {
       const cur = this.panel.currentOptions();
       if (cur) {
         this.scene.showOptions(cur.options);
-        if (cur.options.length === 1 && cur.options[0].kind === 'enter' && state.pending.length === 1) {
-          // 선택지가 하나뿐이면 오퍼레이터가 클릭 한 번 아끼도록 자동 이동
-          setTimeout(() => this.store.dispatch((s) => (s.phase === 'move' ? applyMove(s, 0, cur.options[0]) : s)), 350);
+        if (state.throwsLeft === 0 && state.pending.length === 1 && cur.options.length === 1 && cur.options[0].kind === 'enter') {
+          // 더 던질 것도 없고 선택지도 하나뿐이면 클릭 한 번 아끼도록 자동 이동
+          setTimeout(() => this.store.dispatch((s) => (s.phase === 'move' && s.pending.length === 1 ? applyMove(s, [0], cur.options[0]) : s)), 350);
         }
       }
     }
@@ -171,11 +171,13 @@ export class App {
         ? '게임 종료'
         : s.phase === 'quiz'
           ? '퀴즈 진행 중'
-          : s.phase === 'move'
-            ? `말을 움직이세요 (${summarizePending(s.pending)})`
-            : s.extraThrow
-              ? '한 번 더 던지세요!'
-              : '윷을 던지세요';
+          : s.pending.length && s.throwsLeft > 0
+            ? `더 던지거나 먼저 움직이세요 (${summarizePending(s.pending)})`
+            : s.pending.length
+              ? `말을 움직이세요 (${summarizePending(s.pending)})`
+              : s.throwsLeft > 1
+                ? `윷을 던지세요 (남은 던지기 ${s.throwsLeft})`
+                : '윷을 던지세요';
     const ranks = s.finishOrder.map((tid, i) => el('span', { class: 'rank' }, `${['🥇', '🥈', '🥉'][i] ?? `${i + 1}위`} ${this.teamName(s, tid)}`));
     append(
       this.banner,
@@ -215,9 +217,9 @@ export class App {
         if (this.busy) return;
         d((s) => inputThrow(s, r));
       },
-      applyOption: (i: number, opt: Parameters<typeof applyMove>[2]) => {
+      applyOption: (indices: number[], opt: Parameters<typeof applyMove>[2]) => {
         if (this.busy) return;
-        d((s) => applyMove(s, i, opt));
+        d((s) => applyMove(s, indices, opt));
       },
       undo: () => {
         if (this.busy) return;
@@ -285,7 +287,7 @@ export class App {
       onHop: () => this.audio.sfxHop(),
       onOptionClick: (i) => {
         const cur = this.panel.currentOptions();
-        if (cur && cur.options[i] && !this.busy) this.store.dispatch((s) => applyMove(s, this.panel.pendingIndex, cur.options[i]));
+        if (cur && cur.options[i] && !this.busy) this.store.dispatch((s) => applyMove(s, cur.indices, cur.options[i]));
       },
       onPieceClick: (pieceId) => {
         const s = this.store.current;
@@ -302,7 +304,7 @@ export class App {
         const cur = this.panel.currentOptions();
         if (!cur || this.busy) return;
         const opt = cur.options.find((o) => o.pieceIds.includes(pieceId));
-        if (opt) this.store.dispatch((st) => applyMove(st, this.panel.pendingIndex, opt));
+        if (opt) this.store.dispatch((st) => applyMove(st, cur.indices, opt));
       },
       onNodeClick: (nodeId: NodeId) => {
         if (this.panel.adminTool !== 'moveDest' || !this.panel.adminPiece || this.busy) return;
@@ -348,7 +350,8 @@ export class App {
         if (this.heldKeys.has(e.key) || now - this.lastHotkeyAt < 200) return;
         this.heldKeys.add(e.key);
         this.lastHotkeyAt = now;
-        if (this.store.current.phase === 'throw') this.actions().throw(map[e.key]);
+        const ph = this.store.current.phase;
+        if ((ph === 'throw' || ph === 'move') && this.store.current.throwsLeft > 0) this.actions().throw(map[e.key]);
         return;
       }
       if ((e.key === 'z' || e.key === 'Z') && !this.quiz.isOpen) {

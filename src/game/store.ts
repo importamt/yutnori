@@ -12,6 +12,15 @@ interface SaveFile {
   history: GameState[];
 }
 
+/** 예전 저장 파일(extraThrow 불리언) → throwsLeft 숫자로 변환 */
+function migrate(state: GameState): GameState {
+  const legacy = state as GameState & { extraThrow?: boolean };
+  if (typeof legacy.throwsLeft === 'number') return state;
+  const throwsLeft = legacy.extraThrow ? 1 : legacy.phase === 'throw' ? 1 : 0;
+  const { extraThrow: _drop, ...rest } = legacy;
+  return { ...rest, throwsLeft };
+}
+
 function strip(state: GameState): GameState {
   return { ...state, events: [] };
 }
@@ -109,8 +118,8 @@ export class GameStore {
   }
 
   restore(file: SaveFile): void {
-    this.history = file.history ?? [];
-    this.state = { ...file.state, events: [] };
+    this.history = (file.history ?? []).map(migrate);
+    this.state = { ...migrate(file.state), events: [] };
     this.persist();
     this.emit([]);
   }

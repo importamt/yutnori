@@ -1,4 +1,4 @@
-import { currentTeam, movableOptions, type AdminDest, type GameState, type MoveOption, type Team } from '../game/engine';
+import { combinedSteps, currentTeam, movableOptions, type AdminDest, type GameState, type MoveOption, type Team } from '../game/engine';
 import { YUT_INFO, YUT_ORDER, type YutResult } from '../game/yut';
 import type { MusicSource } from '../audio/engine';
 import type { ViewPreset } from '../render/scene';
@@ -10,7 +10,8 @@ export type AdminTool = 'none' | 'movePick' | 'moveDest' | 'teamPick';
 
 export interface PanelActions {
   throw: (r: YutResult) => void;
-  applyOption: (pendingIndex: number, opt: MoveOption) => void;
+  /** 선택한 대기 결과들(인덱스)을 합쳐 option 대로 이동 */
+  applyOption: (pendingIndices: number[], opt: MoveOption) => void;
   undo: () => void;
   endTurn: () => void;
   adminMove: (pieceId: string, dest: AdminDest) => void;
@@ -56,7 +57,9 @@ export interface MusicView {
 export class Panel {
   readonly root: HTMLElement;
   mode: Mode = 'play';
-  pendingIndex = 0;
+  /** 합쳐서 움직일 대기 결과 인덱스들 (기본: 첫 번째 하나) */
+  selectedPending = new Set<number>([0]);
+  private lastPendingKey = '';
   adminTool: AdminTool = 'none';
   adminPiece: string | null = null;
   private adminQuizQ = '';
@@ -75,7 +78,11 @@ export class Panel {
     this.music = music;
     this.canUndo = canUndo;
     this.busy = busy;
-    if (this.pendingIndex >= state.pending.length) this.pendingIndex = 0;
+    const key = state.pending.join(',');
+    if (key !== this.lastPendingKey) {
+      this.lastPendingKey = key;
+      this.selectedPending = new Set(state.pending.length ? [0] : []);
+    }
     this.render();
   }
 
@@ -86,11 +93,27 @@ export class Panel {
     this.render();
   }
 
-  currentOptions(): { result: YutResult; options: MoveOption[] } | null {
+  currentOptions(): { indices: number[]; results: YutResult[]; options: MoveOption[] } | null {
     const s = this.state;
-    if (!s || s.phase !== 'move' || !s.pending.length) return null;
-    const result = s.pending[this.pendingIndex] ?? s.pending[0];
-    return { result, options: movableOptions(s, result) };
+    if (!s || (s.phase !== 'move' && s.phase !== 'throw') || !s.pending.length) return null;
+    const indices = [...this.selectedPending].filter((i) => i < s.pending.length).sort((a, b) => a - b);
+    if (!indices.length) return null;
+    const results = indices.map((i) => s.pending[i]);
+    return { indices, results, options: movableOptions(s, results) };
+  }
+
+  private togglePending(i: number): void {
+    const s = this.state;
+    if (!s) return;
+    const next = new Set(this.selectedPending);
+    if (next.has(i)) {
+      if (next.size > 1) next.delete(i);
+    } else if (s.pending[i] === 'backdo' || [...next].some((k) => s.pending[k] === 'backdo')) {
+      next.clear(); // 백도는 단독으로만
+      next.add(i);
+    } else next.add(i);
+    this.selectedPending = next;
+    this.render();
   }
 
   private go(mode: Mode): void {
@@ -128,9 +151,19 @@ export class Panel {
 
   private renderPlay(body: HTMLElement, s: GameState): void {
     const team = currentTeam(s);
-    const canThrow = s.phase === 'throw' && !this.busy;
+    const canThrow = (s.phase === 'throw' || s.phase === 'move') && s.throwsLeft > 0 && !this.busy;
     const msg =
-      s.phase === 'finished' ? '게임 종료' : s.phase === 'quiz' ? '퀴즈 진행 중…' : s.phase === 'move' ? '움직일 말을 고르세요' : s.extraThrow ? '한 번 더!' : '윷을 던지세요';
+      s.phase === 'finished'
+        ? '게임 종료'
+        : s.phase === 'quiz'
+          ? '퀴즈 진행 중…'
+          : s.pending.length && s.throwsLeft > 0
+            ? `더 던지거나 먼저 움직이세요 (남은 던지기 ${s.throwsLeft})`
+            : s.pending.length
+              ? '움직일 말을 고르세요'
+              : s.throwsLeft > 1
+                ? `윷을 던지세요 (남은 던지기 ${s.throwsLeft})`
+                : '윷을 던지세요';
 
     body.append(
       el(
@@ -160,6 +193,7 @@ export class Panel {
 
     if (s.pending.length) {
       const opts = this.currentOptions();
+      const steps = opts ? combinedSteps(opts.results) : null;
       body.append(
         el(
           'div',
@@ -168,17 +202,19 @@ export class Panel {
             'div',
             { class: 'pending' },
             ...s.pending.map((r, i) =>
-              el('button', { class: `pend ${i === this.pendingIndex ? 'active' : ''}`, onClick: () => { this.pendingIndex = i; this.render(); } }, YUT_INFO[r].label),
+              el('button', { class: `pend ${this.selectedPending.has(i) ? 'active' : ''}`, title: '클릭해서 합칠 결과 선택/해제', onClick: () => this.togglePending(i) }, YUT_INFO[r].label),
             ),
+            s.pending.length > 1 ? el('span', { class: 'pend-sum' }, steps !== null ? `합 ${steps}칸` : '백도는 단독') : null,
           ),
+          s.pending.length > 1 ? el('p', { class: 'hint' }, '결과를 여러 개 선택하면 합쳐서 한 번에 움직입니다.') : null,
           el(
             'div',
             { class: 'options' },
-            ...(opts && s.phase === 'move'
+            ...(opts
               ? opts.options.map((o) => {
                   const dest = o.dest === 'DONE' ? '완주 🏁' : o.dest;
                   const label = o.kind === 'enter' ? `새 말 출발 ▶ ${dest}` : `${o.from} 칸 말${o.pieceIds.length > 1 ? `×${o.pieceIds.length}` : ''} ▶ ${dest}`;
-                  return el('button', { class: 'pbtn option', disabled: this.busy, onClick: () => this.actions.applyOption(this.pendingIndex, o) }, label);
+                  return el('button', { class: 'pbtn option', disabled: this.busy, onClick: () => this.actions.applyOption(opts.indices, o) }, label);
                 })
               : []),
           ),

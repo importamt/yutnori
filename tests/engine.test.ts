@@ -26,8 +26,8 @@ function placePiece(state: GameState, pieceId: string, node: string): GameState 
 }
 
 /** 특정 칸에 있는 말을 움직이는 선택지 */
-function optFrom(state: GameState, result: Parameters<typeof movableOptions>[1], from: string) {
-  const o = movableOptions(state, result).find((x) => x.kind === 'piece' && x.from === from);
+function optFrom(state: GameState, results: Parameters<typeof movableOptions>[1], from: string) {
+  const o = movableOptions(state, results).find((x) => x.kind === 'piece' && x.from === from);
   if (!o) throw new Error(`no option from ${from}`);
   return o;
 }
@@ -65,11 +65,48 @@ describe('throw input', () => {
     expect(s.pending).toEqual([]);
   });
 
-  it('낙 after 윷 keeps the earlier result and goes to move phase', () => {
+  it('낙 voids every pending result and ends the turn (윷윷윷낙 → 전부 무효)', () => {
     let s = inputThrow(game(), 'yut');
+    s = inputThrow(s, 'yut');
+    s = inputThrow(s, 'yut');
     s = inputThrow(s, 'nak');
-    expect(s.phase).toBe('move');
-    expect(s.pending).toEqual(['yut']);
+    expect(s.pending).toEqual([]);
+    expect(s.turnIndex).toBe(1);
+    expect(s.phase).toBe('throw');
+  });
+
+  it('after 윷 the team may move first and still keep the bonus throw', () => {
+    let s = inputThrow(game(), 'yut');
+    expect(s.throwsLeft).toBe(1);
+    s = applyMove(s, [0], movableOptions(s, ['yut'])[0]);
+    expect(s.pieces.find((p) => p.id === 't1-1')!.node).toBe('4');
+    expect(s.turnIndex).toBe(0);
+    expect(s.phase).toBe('throw');
+    expect(s.throwsLeft).toBe(1);
+    s = inputThrow(s, 'do');
+    expect(s.pending).toEqual(['do']);
+    s = applyMove(s, [0], optFrom(s, ['do'], '4'));
+    expect(s.turnIndex).toBe(1);
+  });
+
+  it('pending results can be combined into a single move (윷 + 개 = 6칸)', () => {
+    let s = inputThrow(game(), 'yut');
+    s = inputThrow(s, 'gae');
+    const opts = movableOptions(s, ['yut', 'gae']);
+    expect(opts[0]).toMatchObject({ kind: 'enter', dest: '6' });
+    s = applyMove(s, [0, 1], opts[0]);
+    expect(s.pieces.find((p) => p.id === 't1-1')!.node).toBe('6');
+    expect(s.pending).toEqual([]);
+    expect(s.phase).toBe('quiz'); // 6은 퀴즈 칸
+  });
+
+  it('백도 cannot be combined with other results', () => {
+    let s = game();
+    s = placePiece(s, 't1-1', '5');
+    s = inputThrow(s, 'yut');
+    s = inputThrow(s, 'backdo');
+    expect(movableOptions(s, ['yut', 'backdo'])).toEqual([]);
+    expect(applyMove(s, [0, 1], { kind: 'piece', from: '5', dest: '4', pieceIds: ['t1-1'] })).toBe(s);
   });
 
   it('백도 with no piece on board skips the turn', () => {
@@ -82,7 +119,7 @@ describe('throw input', () => {
 describe('movable options', () => {
   it('offers entering a new piece when pieces remain at home', () => {
     const s = inputThrow(game(), 'do');
-    const opts = movableOptions(s, 'do');
+    const opts = movableOptions(s, ['do']);
     expect(opts).toEqual([{ kind: 'enter', dest: '1', pieceIds: ['t1-1'] }]);
   });
 
@@ -91,7 +128,7 @@ describe('movable options', () => {
     s = placePiece(s, 't1-1', '3');
     s = placePiece(s, 't1-2', '3');
     s = inputThrow(s, 'gae');
-    const opts = movableOptions(s, 'gae');
+    const opts = movableOptions(s, ['gae']);
     expect(opts).toHaveLength(1);
     expect(opts[0]).toMatchObject({ kind: 'piece', from: '3', dest: '5', pieceIds: ['t1-1', 't1-2'] });
   });
@@ -100,7 +137,7 @@ describe('movable options', () => {
 describe('moving, catching and stacking', () => {
   it('moves a piece and passes the turn after a plain result', () => {
     let s = inputThrow(game(), 'geol');
-    s = applyMove(s, 0, movableOptions(s, 'geol')[0]);
+    s = applyMove(s, [0], movableOptions(s, ['geol'])[0]);
     expect(s.pieces.find((p) => p.id === 't1-1')!.node).toBe('3');
     expect(s.turnIndex).toBe(1);
     expect(s.phase).toBe('throw');
@@ -110,11 +147,11 @@ describe('moving, catching and stacking', () => {
     let s = game();
     s = placePiece(s, 't2-1', '3');
     s = inputThrow(s, 'geol');
-    s = applyMove(s, 0, movableOptions(s, 'geol')[0]); // 새 말 출발 → 3
+    s = applyMove(s, [0], movableOptions(s, ['geol'])[0]); // 새 말 출발 → 3
     expect(s.pieces.find((p) => p.id === 't2-1')!.node).toBeNull();
     expect(s.turnIndex).toBe(0);
     expect(s.phase).toBe('throw');
-    expect(s.extraThrow).toBe(true);
+    expect(s.throwsLeft).toBe(1);
   });
 
   it('a stack moves together', () => {
@@ -122,17 +159,18 @@ describe('moving, catching and stacking', () => {
     s = placePiece(s, 't1-1', '2');
     s = placePiece(s, 't1-2', '2');
     s = inputThrow(s, 'do');
-    s = applyMove(s, 0, movableOptions(s, 'do')[0]);
+    s = applyMove(s, [0], movableOptions(s, ['do'])[0]);
     expect(s.pieces.filter((p) => p.node === '3')).toHaveLength(2);
   });
 
   it('a 윷 result followed by 도 lets the team make two moves before the turn ends', () => {
     let s = inputThrow(game(), 'yut');
     s = inputThrow(s, 'do');
-    s = applyMove(s, 0, movableOptions(s, 'yut')[0]);
+    s = applyMove(s, [0], movableOptions(s, ['yut'])[0]);
     expect(s.turnIndex).toBe(0);
     expect(s.phase).toBe('move');
-    s = applyMove(s, 0, movableOptions(s, 'do')[0]);
+    expect(s.throwsLeft).toBe(0);
+    s = applyMove(s, [0], movableOptions(s, ['do'])[0]);
     expect(s.turnIndex).toBe(1);
   });
 
@@ -140,7 +178,7 @@ describe('moving, catching and stacking', () => {
     let s = game(1);
     s = placePiece(s, 't1-1', '19');
     s = inputThrow(s, 'do');
-    s = applyMove(s, 0, optFrom(s, 'do', '19'));
+    s = applyMove(s, [0], optFrom(s, ['do'], '19'));
     expect(s.pieces.find((p) => p.id === 't1-1')!.done).toBe(true);
     expect(s.finishOrder).toEqual(['t1']);
   });
@@ -149,7 +187,7 @@ describe('moving, catching and stacking', () => {
     let s = game(1);
     s = placePiece(s, 't2-1', 'DONE');
     s = inputThrow(s, 'do');
-    s = applyMove(s, 0, movableOptions(s, 'do')[0]);
+    s = applyMove(s, [0], movableOptions(s, ['do'])[0]);
     expect(s.teams[s.turnIndex].id).toBe('t3');
   });
 });
@@ -159,7 +197,7 @@ describe('quiz squares', () => {
     let s = game();
     s = placePiece(s, 't1-1', '4');
     s = inputThrow(s, 'gae');
-    s = applyMove(s, 0, optFrom(s, 'gae', '4'));
+    s = applyMove(s, [0], optFrom(s, ['gae'], '4'));
     expect(s.phase).toBe('quiz');
     expect(s.quiz?.pieceId).toBe('t1-1');
     expect(s.quiz?.questionId).toBeDefined();
@@ -169,7 +207,7 @@ describe('quiz squares', () => {
     let s = game();
     s = placePiece(s, 't1-1', '4');
     s = inputThrow(s, 'gae');
-    s = applyMove(s, 0, optFrom(s, 'gae', '4'));
+    s = applyMove(s, [0], optFrom(s, ['gae'], '4'));
     const q = SAMPLE_QUESTIONS.find((x) => x.id === s.quiz!.questionId)!;
     s = answerQuiz(s, q.answer);
     expect(s.pieces.find((p) => p.id === 't1-1')!.node).toBe('8');
@@ -181,7 +219,7 @@ describe('quiz squares', () => {
     let s = game();
     s = placePiece(s, 't1-1', '4');
     s = inputThrow(s, 'gae');
-    s = applyMove(s, 0, optFrom(s, 'gae', '4'));
+    s = applyMove(s, [0], optFrom(s, ['gae'], '4'));
     const q = SAMPLE_QUESTIONS.find((x) => x.id === s.quiz!.questionId)!;
     s = answerQuiz(s, (q.answer + 1) % q.choices.length);
     expect(s.pieces.find((p) => p.id === 't1-1')!.node).toBe('4');
@@ -192,8 +230,8 @@ describe('quiz squares', () => {
     s = placePiece(s, 't1-1', '7'); // 개 -> 9 (quiz), +2 -> 11 ; -2 -> 7
     s = placePiece(s, 't1-2', '10'); // dummy, unaffected
     s = inputThrow(s, 'gae');
-    const opt = movableOptions(s, 'gae').find((o) => o.kind === 'piece' && o.from === '7')!;
-    s = applyMove(s, 0, opt);
+    const opt = movableOptions(s, ['gae']).find((o) => o.kind === 'piece' && o.from === '7')!;
+    s = applyMove(s, [0], opt);
     expect(s.phase).toBe('quiz');
     const q = SAMPLE_QUESTIONS.find((x) => x.id === s.quiz!.questionId)!;
     // wrong: 9 -> 7. 7 is not quiz, so simply check phase is not quiz afterwards
@@ -205,7 +243,7 @@ describe('quiz squares', () => {
     let s = game(1);
     s = placePiece(s, 't1-1', '17');
     s = inputThrow(s, 'gae');
-    s = applyMove(s, 0, optFrom(s, 'gae', '17'));
+    s = applyMove(s, [0], optFrom(s, ['gae'], '17'));
     expect(s.phase).toBe('quiz');
     const q = SAMPLE_QUESTIONS.find((x) => x.id === s.quiz!.questionId)!;
     s = answerQuiz(s, q.answer);
@@ -219,7 +257,7 @@ describe('quiz squares', () => {
       s = adminSetTurn(s, 0);
       s = placePiece(s, 't1-1', '4');
       s = inputThrow(s, 'gae');
-      s = applyMove(s, 0, optFrom(s, 'gae', '4'));
+      s = applyMove(s, [0], optFrom(s, ['gae'], '4'));
       expect(s.phase).toBe('quiz');
       seen.add(s.quiz!.questionId);
       const q = SAMPLE_QUESTIONS.find((x) => x.id === s.quiz!.questionId)!;

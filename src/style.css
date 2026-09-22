@@ -126,6 +126,7 @@ body {
 .pending { display: flex; gap: 6px; flex-wrap: wrap; }
 .pend { padding: 4px 12px; border: 2px solid var(--line); background: transparent; color: var(--text); font: inherit; font-size: 16px; cursor: pointer; }
 .pend.active { background: var(--yellow); color: #1d1d1d; border-color: var(--yellow); }
+.pend-sum { align-self: center; font-size: 13px; color: var(--yellow); margin-left: 4px; }
 .options { display: flex; flex-direction: column; gap: 6px; }
 
 .pbtn {

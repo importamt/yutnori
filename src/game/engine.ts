@@ -52,9 +52,10 @@ export interface GameState {
   pieces: Piece[];
   turnIndex: number;
   phase: Phase;
+  /** 아직 말을 움직이지 않은 윷 결과들. 여러 개를 합쳐 한 번에 움직일 수 있다 */
   pending: YutResult[];
-  /** 잡기/윷/모 로 얻은 추가 던지기 */
-  extraThrow: boolean;
+  /** 이 차례에 남은 던지기 횟수 (차례 시작 1, 윷/모/잡기마다 +1, 낙이면 0) */
+  throwsLeft: number;
   quiz: QuizContext | null;
   finishOrder: string[];
   questions: Question[];
@@ -122,7 +123,7 @@ export function createGame(config: CreateGameConfig): GameState {
     turnIndex: 0,
     phase: 'throw',
     pending: [],
-    extraThrow: false,
+    throwsLeft: 1,
     quiz: null,
     finishOrder: [],
     questions: config.questions,
@@ -134,10 +135,18 @@ export function createGame(config: CreateGameConfig): GameState {
   return withLog(state, `게임 시작 · ${config.teams.length}팀 · 팀당 말 ${piecesPerTeam}개`);
 }
 
-/** 해당 결과로 움직일 수 있는 선택지 (같은 칸의 말은 하나로 묶임) */
-export function movableOptions(state: GameState, result: YutResult): MoveOption[] {
-  const steps = YUT_INFO[result].steps;
-  if (steps === 0) return [];
+/** 결과 묶음의 총 이동 칸 수. 백도는 단독으로만 쓸 수 있다 (합칠 수 없으면 null) */
+export function combinedSteps(results: YutResult[]): number | null {
+  if (results.length === 0) return null;
+  if (results.some((r) => r === 'nak')) return null;
+  if (results.includes('backdo')) return results.length === 1 ? -1 : null;
+  return results.reduce((n, r) => n + YUT_INFO[r].steps, 0);
+}
+
+/** 해당 결과(묶음)로 움직일 수 있는 선택지 (같은 칸의 말은 하나로 묶임) */
+export function movableOptions(state: GameState, results: YutResult[]): MoveOption[] {
+  const steps = combinedSteps(results);
+  if (steps === null || steps === 0) return [];
   const team = currentTeam(state);
   const mine = teamPieces(state, team.id).filter((p) => !p.done);
   const options: MoveOption[] = [];
@@ -178,31 +187,26 @@ function activeTeamCount(state: GameState): number {
 /** 대기 중인 결과 정리 후 다음 단계 결정 */
 function advance(state: GameState): GameState {
   let s = state;
-  // 움직일 수 없는 결과 제거
-  const pending = s.pending.filter((r) => {
-    const ok = movableOptions(s, r).length > 0;
-    if (!ok) s = withLog(s, `${YUT_INFO[r].label}: 움직일 수 있는 말이 없어 건너뜁니다.`);
-    return ok;
-  });
-  s = { ...s, pending };
+  // 더 던질 게 없을 때만, 움직일 수 없는 결과를 정리한다 (아직 던질 수 있으면 나중에 움직일 수 있게 될지도)
+  if (s.throwsLeft === 0) {
+    const pending = s.pending.filter((r) => {
+      const ok = movableOptions(s, [r]).length > 0;
+      if (!ok) s = withLog(s, `${YUT_INFO[r].label}: 움직일 수 있는 말이 없어 건너뜁니다.`);
+      return ok;
+    });
+    s = { ...s, pending };
+  }
 
   if (activeTeamCount(s) <= 1 && s.finishOrder.length > 0) {
     return { ...s, phase: 'finished', pending: [], events: [...s.events] };
   }
-  if (s.pending.length > 0) return { ...s, phase: 'move' };
-  if (s.extraThrow) {
-    return {
-      ...s,
-      phase: 'throw',
-      events: [...s.events, { type: 'turn', teamId: currentTeam(s).id, extra: true }],
-    };
-  }
-  return passTurn(s);
+  if (s.pending.length === 0 && s.throwsLeft === 0) return passTurn(s);
+  return { ...s, phase: s.throwsLeft > 0 ? 'throw' : 'move' };
 }
 
 function passTurn(state: GameState): GameState {
   const idx = nextTurnIndex(state, state.turnIndex);
-  const s: GameState = { ...state, turnIndex: idx, phase: 'throw', pending: [], extraThrow: false, quiz: null };
+  const s: GameState = { ...state, turnIndex: idx, phase: 'throw', pending: [], throwsLeft: 1, quiz: null };
   return {
     ...withLog(s, `▶ ${teamName(s, s.teams[idx].id)} 차례`),
     events: [...s.events, { type: 'turn', teamId: s.teams[idx].id, extra: false }],
@@ -211,23 +215,23 @@ function passTurn(state: GameState): GameState {
 
 export function inputThrow(state: GameState, result: YutResult): GameState {
   if (state.phase !== 'throw' && state.phase !== 'move') return state;
+  if (state.throwsLeft <= 0) return state;
   const team = currentTeam(state);
   const info = YUT_INFO[result];
-  let s: GameState = { ...state, events: [{ type: 'throw', result, teamId: team.id }], seq: state.seq + 1 };
+  let s: GameState = { ...state, events: [{ type: 'throw', result, teamId: team.id }], seq: state.seq + 1, throwsLeft: state.throwsLeft - 1 };
   s = withLog(s, `${team.name}: ${info.label}`);
 
   if (result === 'nak') {
-    s = { ...s, extraThrow: false };
-    if (s.pending.length === 0) {
-      s = withLog(s, `${team.name}: 낙! 차례가 넘어갑니다.`);
-      return passTurn(s);
-    }
-    return advance(s);
+    const voided = s.pending.length ? ` (${s.pending.map((r) => YUT_INFO[r].label).join('·')} 무효)` : '';
+    s = withLog({ ...s, pending: [], throwsLeft: 0 }, `${team.name}: 낙! 차례가 넘어갑니다.${voided}`);
+    return passTurn(s);
   }
 
-  s = { ...s, pending: [...s.pending, result], extraThrow: false };
+  s = { ...s, pending: [...s.pending, result] };
   if (info.again) {
-    return withLog({ ...s, phase: 'throw' }, `${info.label}! 한 번 더 던지세요.`);
+    s = { ...s, throwsLeft: s.throwsLeft + 1 };
+    s = withLog(s, `${info.label}! 한 번 더 던질 수 있습니다. (먼저 움직여도 됩니다)`);
+    s.events = [...s.events, { type: 'turn', teamId: team.id, extra: true }];
   }
   return advance(s);
 }
@@ -275,7 +279,7 @@ function performMove(
     s = {
       ...s,
       pieces: s.pieces.map((p) => (vids.has(p.id) ? { ...p, node: null, trail: [] } : p)),
-      extraThrow: source === 'admin' ? s.extraThrow : true,
+      throwsLeft: source === 'admin' ? s.throwsLeft : s.throwsLeft + 1,
     };
     s.events = [...s.events, { type: 'catch', pieceIds: victims.map((v) => v.id), byTeamId: lead.teamId, node: dest }];
     const victimTeams = [...new Set(victims.map((v) => teamName(s, v.teamId)))].join(', ');
@@ -320,13 +324,17 @@ function openQuiz(state: GameState, pieceId: string, node: NodeId): GameState {
   return withLog(s, `❓ ${teamName(s, piece.teamId)}: 퀴즈 칸 ${node}! 문제 출제`);
 }
 
-export function applyMove(state: GameState, pendingIndex: number, option: MoveOption): GameState {
+/** 대기 결과 중 pendingIndices 에 해당하는 것들을 합쳐 option 대로 한 번에 움직인다 */
+export function applyMove(state: GameState, pendingIndices: number[], option: MoveOption): GameState {
   if (state.phase !== 'move' && state.phase !== 'throw') return state;
-  const result = state.pending[pendingIndex];
-  if (!result) return state;
-  const steps = YUT_INFO[result].steps;
-  const pending = state.pending.filter((_, i) => i !== pendingIndex);
+  const idx = [...new Set(pendingIndices)].filter((i) => i >= 0 && i < state.pending.length);
+  if (idx.length === 0) return state;
+  const results = idx.map((i) => state.pending[i]);
+  const steps = combinedSteps(results);
+  if (steps === null || steps === 0) return state;
+  const pending = state.pending.filter((_, i) => !idx.includes(i));
   let s: GameState = { ...state, pending, events: [], seq: state.seq + 1 };
+  if (results.length > 1) s = withLog(s, `${results.map((r) => YUT_INFO[r].label).join(' + ')} = ${steps}칸 합쳐서 이동`);
   const out = performMove(s, option.pieceIds, steps, 'throw');
   s = out.state;
   if (out.landedQuiz) return openQuiz(s, option.pieceIds[0], out.landedQuiz);
@@ -402,7 +410,7 @@ export function adminSetTurn(state: GameState, teamIndex: number): GameState {
     turnIndex: teamIndex,
     phase: 'throw',
     pending: [],
-    extraThrow: false,
+    throwsLeft: 1,
     quiz: null,
     events: [{ type: 'turn', teamId: state.teams[teamIndex].id, extra: false }],
     seq: state.seq + 1,
@@ -411,17 +419,17 @@ export function adminSetTurn(state: GameState, teamIndex: number): GameState {
 }
 
 export function adminEndTurn(state: GameState): GameState {
-  const s: GameState = { ...state, events: [], seq: state.seq + 1, extraThrow: false, pending: [], quiz: null };
+  const s: GameState = { ...state, events: [], seq: state.seq + 1, throwsLeft: 0, pending: [], quiz: null };
   return passTurn(withLog(s, '🛠 관리자: 차례 넘김'));
 }
 
 export function adminGrantExtraThrow(state: GameState): GameState {
-  const s: GameState = { ...state, phase: 'throw', extraThrow: true, events: [], seq: state.seq + 1 };
-  return withLog(s, `🛠 관리자: ${currentTeam(s).name} 한 번 더 던지기`);
+  const s: GameState = { ...state, phase: 'throw', throwsLeft: state.throwsLeft + 1, events: [], seq: state.seq + 1 };
+  return withLog(s, `🛠 관리자: ${currentTeam(s).name} 던지기 +1 (남은 던지기 ${s.throwsLeft})`);
 }
 
 export function adminClearPending(state: GameState): GameState {
-  const s: GameState = { ...state, pending: [], phase: 'throw', quiz: null, events: [], seq: state.seq + 1 };
+  const s: GameState = { ...state, pending: [], phase: 'throw', throwsLeft: Math.max(1, state.throwsLeft), quiz: null, events: [], seq: state.seq + 1 };
   return withLog(s, '🛠 관리자: 대기 중인 결과 삭제');
 }
 
