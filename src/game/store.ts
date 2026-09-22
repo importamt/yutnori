@@ -182,8 +182,9 @@ export class GameStore {
     this.emit([]);
   }
 
+  /** 상태 파일 내보내기: 되돌리기 이력 + 액션별 체크포인트까지 포함해 사후 분석이 가능하게 */
   exportJson(): string {
-    return JSON.stringify(this.toSaveFile(), null, 2);
+    return JSON.stringify({ ...this.toSaveFile(), checkpoints: GameStore.listCheckpoints() }, null, 2);
   }
 
   importJson(text: string): void {
