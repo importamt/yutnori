@@ -303,6 +303,7 @@ export class App {
     this.scene.callbacks = {
       onHop: () => this.audio.sfxHop(),
       onPieceHover: (pieceId, x, y) => this.showPieceTooltip(pieceId, x, y),
+      onPropHover: (name, x, y) => this.showPropTooltip(name, x, y),
       onOptionClick: (i) => {
         const cur = this.panel.currentOptions();
         if (cur && cur.options[i] && !this.busy) this.store.dispatch((s) => applyMove(s, cur.indices, cur.options[i]));
@@ -336,11 +337,31 @@ export class App {
     };
   }
 
+  /** 소품(달토끼) 위에 마우스를 올리면 이름을 보여준다 */
+  private showPropTooltip(name: string | null, x: number, y: number): void {
+    if (!name) {
+      if (this.tooltip.dataset.kind === 'prop') this.tooltip.classList.add('hidden');
+      return;
+    }
+    clear(this.tooltip);
+    this.tooltip.dataset.kind = 'prop';
+    this.tooltip.append(el('div', { class: 'tt-team' }, '🐰 ', name), el('div', { class: 'tt-sub' }, '절구 찧는 달토끼'));
+    this.tooltip.classList.remove('hidden');
+    this.placeTooltip(x, y);
+  }
+
+  private placeTooltip(x: number, y: number): void {
+    const rect = this.root.getBoundingClientRect();
+    const left = Math.min(x - rect.left + 16, rect.width - 240);
+    const top = Math.max(8, y - rect.top - 64);
+    this.tooltip.style.transform = `translate(${left}px, ${top}px)`;
+  }
+
   /** 말 위에 마우스를 올리면 팀명·말 번호·위치를 보여준다 */
   private showPieceTooltip(pieceId: string | null, x: number, y: number): void {
     const s = this.store.current;
     if (!pieceId || !s) {
-      this.tooltip.classList.add('hidden');
+      if (this.tooltip.dataset.kind !== 'prop') this.tooltip.classList.add('hidden');
       return;
     }
     const piece = s.pieces.find((p) => p.id === pieceId);
@@ -352,15 +373,13 @@ export class App {
     const where = piece.done ? '완주' : piece.node === null ? '집(대기)' : piece.node === 'S' ? '출발점' : `${piece.node} 칸`;
     const count = s.pieces.filter((p) => p.teamId === team.id).length;
     clear(this.tooltip);
+    this.tooltip.dataset.kind = 'piece';
     this.tooltip.append(
       el('div', { class: 'tt-team' }, el('i', { class: 'sq', style: `background:${team.color}` }), team.name),
       el('div', { class: 'tt-sub' }, `${count > 1 ? `${piece.id.split('-')[1]}번 말 · ` : ''}${where}${s.teams[s.turnIndex]?.id === team.id ? ' · 지금 차례' : ''}`),
     );
     this.tooltip.classList.remove('hidden');
-    const rect = this.root.getBoundingClientRect();
-    const left = Math.min(x - rect.left + 16, rect.width - 240);
-    const top = Math.max(8, y - rect.top - 64);
-    this.tooltip.style.transform = `translate(${left}px, ${top}px)`;
+    this.placeTooltip(x, y);
   }
 
   /** 현재 선택된 대기 결과 기준으로 판 위 목적지 표시를 다시 그린다 */

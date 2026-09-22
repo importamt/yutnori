@@ -94,6 +94,8 @@ export interface SceneCallbacks {
   onOptionClick?: (index: number) => void;
   /** 말 위에 마우스가 올라가거나(pieceId) 벗어날 때(null) */
   onPieceHover?: (pieceId: string | null, x: number, y: number) => void;
+  /** 소품(토끼 등) 위에 마우스가 올라가거나(name) 벗어날 때(null) */
+  onPropHover?: (name: string | null, x: number, y: number) => void;
   onHop?: () => void;
 }
 
@@ -372,9 +374,10 @@ export class BoardScene {
 
 
   private rabbits: Array<{ arm: THREE.Group; phase: number }> = [];
+  private props: THREE.Object3D[] = [];
 
   /** 절구 찧는 달토끼: 방망이는 frame() 에서 위아래로 움직인다 */
-  private rabbit(x: number, z: number, rotY: number, phase: number): void {
+  private rabbit(x: number, z: number, rotY: number, phase: number, name: string): void {
     const g = new THREE.Group();
     const white = flat(C.rabbit);
     const pink = flat(C.rabbitPink);
@@ -417,6 +420,8 @@ export class BoardScene {
     this.rabbits.push({ arm, phase });
     g.rotation.y = rotY;
     g.position.set(x, 0, z);
+    g.traverse((o) => (o.userData.propName = name));
+    this.props.push(g);
     this.scene.add(g);
   }
 
@@ -499,8 +504,8 @@ export class BoardScene {
     for (const [x, z, sc, rot] of pouches) this.pouch(x, z, sc, rot);
 
     // 절구 찧는 달토끼 (앞쪽 양옆)
-    this.rabbit(-3.5, 4.95, 0.5, 0);
-    this.rabbit(3.5, 4.95, -0.5, Math.PI * 0.6);
+    this.rabbit(-3.5, 4.95, 0.5, 0, '토돌이');
+    this.rabbit(3.5, 4.95, -0.5, Math.PI * 0.6, '토순이');
 
     // 판 뒤쪽: TVING 복셀 3D 로고
     this.buildTvingLogo(0, -5.3);
@@ -936,6 +941,7 @@ export class BoardScene {
     const objects: THREE.Object3D[] = [...this.highlightGroup.children, ...this.nodeMeshes.values()];
     for (const v of this.pieces.values()) objects.push(v.group);
     for (const t of this.teams.values()) objects.push(t.sign);
+    objects.push(...this.props);
     return this.raycaster.intersectObjects(objects, true);
   }
 
@@ -966,6 +972,7 @@ export class BoardScene {
   }
 
   private hoveredPiece: string | null = null;
+  private hoveredProp: string | null = null;
 
   private handleHover(e: PointerEvent): void {
     if (this.pointerDown) return;
@@ -976,6 +983,12 @@ export class BoardScene {
       this.hoveredPiece = pieceId;
       this.callbacks.onPieceHover?.(pieceId, e.clientX, e.clientY);
     }
+    const propHit = pieceId ? undefined : hits.find((h) => typeof h.object.userData.propName === 'string');
+    const propName = propHit ? (propHit.object.userData.propName as string) : null;
+    if (propName !== this.hoveredProp || propName) {
+      this.hoveredProp = propName;
+      this.callbacks.onPropHover?.(propName, e.clientX, e.clientY);
+    }
     const interactive = hits.some((h) => {
       const d = h.object.userData;
       return (
@@ -984,7 +997,7 @@ export class BoardScene {
         (this.adminMode && (typeof d.nodeId === 'string' || typeof d.teamId === 'string'))
       );
     });
-    this.renderer.domElement.style.cursor = interactive ? 'pointer' : pieceId ? 'help' : 'grab';
+    this.renderer.domElement.style.cursor = interactive ? 'pointer' : pieceId || propName ? 'help' : 'grab';
   }
 
   // ───────────── 루프 ─────────────
