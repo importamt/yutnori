@@ -7,6 +7,7 @@ import {
   movableOptions,
   adminMovePiece,
   adminSetTurn,
+  skipQuiz,
   type GameState,
 } from '../src/game/engine';
 import { SAMPLE_QUESTIONS } from '../src/data/sampleQuestions';
@@ -98,6 +99,29 @@ describe('throw input', () => {
     expect(s.pieces.find((p) => p.id === 't1-1')!.node).toBe('6');
     expect(s.pending).toEqual([]);
     expect(s.phase).toBe('quiz'); // 6은 퀴즈 칸
+  });
+
+  it('윷윷개 can be used one at a time in any order (개 → 윷 → 윷)', () => {
+    let s = game(3);
+    s = inputThrow(s, 'yut');
+    s = inputThrow(s, 'yut');
+    s = inputThrow(s, 'gae');
+    expect(s.pending).toEqual(['yut', 'yut', 'gae']);
+    // 개만 먼저: 새 말 출발 → 2
+    s = applyMove(s, [2], movableOptions(s, ['gae'])[0]);
+    expect(s.pieces.find((p) => p.id === 't1-1')!.node).toBe('2');
+    expect(s.pending).toEqual(['yut', 'yut']);
+    expect(s.turnIndex).toBe(0);
+    // 윷: 2번 칸 말을 6으로 → 퀴즈 칸이므로 퀴즈가 뜨고, 건너뛰면 계속 진행
+    s = applyMove(s, [0], optFrom(s, ['yut'], '2'));
+    expect(s.phase).toBe('quiz');
+    s = skipQuiz(s);
+    expect(s.pending).toEqual(['yut']);
+    expect(s.turnIndex).toBe(0);
+    // 마지막 윷: 새 말 출발 → 4, 그 뒤 차례 종료
+    s = applyMove(s, [0], movableOptions(s, ['yut'])[0]);
+    expect(s.pieces.filter((p) => p.teamId === 't1' && p.node !== null).map((p) => p.node).sort()).toEqual(['4', '6']);
+    expect(s.turnIndex).toBe(1);
   });
 
   it('백도 cannot be combined with other results', () => {

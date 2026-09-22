@@ -221,6 +221,7 @@ export class App {
         if (this.busy) return;
         d((s) => applyMove(s, indices, opt));
       },
+      selectionChanged: () => this.refreshHighlights(),
       undo: () => {
         if (this.busy) return;
         this.quiz.close();
@@ -316,6 +317,17 @@ export class App {
         if (this.panel.adminTool === 'teamPick') this.pickTeam(teamId);
       },
     };
+  }
+
+  /** 현재 선택된 대기 결과 기준으로 판 위 목적지 표시를 다시 그린다 */
+  private refreshHighlights(): void {
+    const s = this.store.current;
+    if (!s || this.busy) return;
+    this.scene.clearHighlights();
+    if ((s.phase === 'move' || s.phase === 'throw') && s.pending.length) {
+      const cur = this.panel.currentOptions();
+      if (cur) this.scene.showOptions(cur.options);
+    }
   }
 
   private setAdminTool(tool: AdminTool, pieceId: string | null): void {

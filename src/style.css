@@ -141,6 +141,7 @@ body {
 .pbtn.danger { background: var(--red); color: #fff; }
 .pbtn.big { padding: 12px 20px; font-size: 18px; }
 .pbtn.small { padding: 4px 10px; font-size: 12px; }
+.pbtn.on { background: var(--yellow); }
 .pbtn.option { justify-content: flex-start; background: #ffd98a; font-size: 15px; }
 .pbtn.file { position: relative; }
 .pbtn.file input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }

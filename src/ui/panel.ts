@@ -12,6 +12,8 @@ export interface PanelActions {
   throw: (r: YutResult) => void;
   /** 선택한 대기 결과들(인덱스)을 합쳐 option 대로 이동 */
   applyOption: (pendingIndices: number[], opt: MoveOption) => void;
+  /** 칩 선택이 바뀌어 판 위 목적지 표시를 다시 그려야 할 때 */
+  selectionChanged: () => void;
   undo: () => void;
   endTurn: () => void;
   adminMove: (pieceId: string, dest: AdminDest) => void;
@@ -57,8 +59,9 @@ export interface MusicView {
 export class Panel {
   readonly root: HTMLElement;
   mode: Mode = 'play';
-  /** 합쳐서 움직일 대기 결과 인덱스들 (기본: 첫 번째 하나) */
+  /** 움직일 대기 결과 인덱스들 (기본: 첫 번째 하나). 합치기 모드/Shift+클릭으로 여러 개 선택 */
   selectedPending = new Set<number>([0]);
+  private combineMode = false;
   private lastPendingKey = '';
   adminTool: AdminTool = 'none';
   adminPiece: string | null = null;
@@ -102,9 +105,16 @@ export class Panel {
     return { indices, results, options: movableOptions(s, results) };
   }
 
-  private togglePending(i: number): void {
+  /** 기본 클릭 = 그 결과만 선택. 합치기 모드 또는 Shift+클릭 = 선택에 추가/제거 */
+  private clickPending(i: number, additive: boolean): void {
     const s = this.state;
     if (!s) return;
+    if (!additive) {
+      this.selectedPending = new Set([i]);
+      this.render();
+      this.actions.selectionChanged();
+      return;
+    }
     const next = new Set(this.selectedPending);
     if (next.has(i)) {
       if (next.size > 1) next.delete(i);
@@ -114,6 +124,7 @@ export class Panel {
     } else next.add(i);
     this.selectedPending = next;
     this.render();
+    this.actions.selectionChanged();
   }
 
   private go(mode: Mode): void {
@@ -202,11 +213,26 @@ export class Panel {
             'div',
             { class: 'pending' },
             ...s.pending.map((r, i) =>
-              el('button', { class: `pend ${this.selectedPending.has(i) ? 'active' : ''}`, title: '클릭해서 합칠 결과 선택/해제', onClick: () => this.togglePending(i) }, YUT_INFO[r].label),
+              el(
+                'button',
+                {
+                  class: `pend ${this.selectedPending.has(i) ? 'active' : ''}`,
+                  title: this.combineMode ? '클릭: 합치기에 추가/제거' : '클릭: 이 결과만 · Shift+클릭: 합치기',
+                  onClick: (e) => this.clickPending(i, this.combineMode || (e as MouseEvent).shiftKey),
+                },
+                YUT_INFO[r].label,
+              ),
             ),
-            s.pending.length > 1 ? el('span', { class: 'pend-sum' }, steps !== null ? `합 ${steps}칸` : '백도는 단독') : null,
+            s.pending.length > 1
+              ? el(
+                  'button',
+                  { class: `pbtn small ${this.combineMode ? 'on' : ''}`, onClick: () => { this.combineMode = !this.combineMode; this.render(); } },
+                  this.combineMode ? '합치기 ON' : '합치기',
+                )
+              : null,
+            s.pending.length > 1 && this.selectedPending.size > 1 ? el('span', { class: 'pend-sum' }, steps !== null ? `합 ${steps}칸` : '백도는 단독') : null,
           ),
-          s.pending.length > 1 ? el('p', { class: 'hint' }, '결과를 여러 개 선택하면 합쳐서 한 번에 움직입니다.') : null,
+          s.pending.length > 1 ? el('p', { class: 'hint' }, '결과는 하나씩 어떤 순서로든 쓸 수 있습니다. 합치려면 [합치기]를 켜거나 Shift+클릭.') : null,
           el(
             'div',
             { class: 'options' },
