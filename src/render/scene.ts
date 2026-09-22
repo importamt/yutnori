@@ -73,6 +73,8 @@ interface PieceView {
 interface TeamView {
   sign: THREE.Group;
   signMat: THREE.MeshBasicMaterial;
+  trophy: THREE.Group;
+  rank: number | null;
   ring: THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial>;
   side: -1 | 1;
   rowZ: number;
@@ -557,17 +559,22 @@ export class BoardScene {
 
   // ───────────── 팀 / 말 뷰 ─────────────
 
-  private ensureTeams(teams: Team[]): void {
+  private ensureTeams(teams: Team[], finishOrder: string[] = []): void {
+    const rankOf = (id: string) => {
+      const i = finishOrder.indexOf(id);
+      return i >= 0 ? i + 1 : null;
+    };
     const same =
       this.teams.size === teams.length &&
       teams.every((t) => {
         const v = this.teams.get(t.id);
-        return v && v.name === t.name && v.color === t.color;
+        return v && v.name === t.name && v.color === t.color && v.rank === rankOf(t.id);
       });
     if (same) return;
     for (const v of this.teams.values()) {
       this.scene.remove(v.sign);
       this.scene.remove(v.ring);
+      this.scene.remove(v.trophy);
     }
     this.teams.clear();
 
@@ -581,8 +588,9 @@ export class BoardScene {
       const rowZ = (idx - (count - 1) / 2) * spacing;
 
       // 간판: 기둥 + 판 (판 안쪽 옆에 세워 앞줄 말을 가리지 않게)
+      const rank = rankOf(t.id);
       const sign = new THREE.Group();
-      const signMat = new THREE.MeshBasicMaterial({ map: signTexture(t.name, t.color) });
+      const signMat = new THREE.MeshBasicMaterial({ map: signTexture(t.name, t.color, rank) });
       const board = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.48, 0.08), [flat(0x3a1f2e), flat(0x3a1f2e), flat(0x3a1f2e), flat(0x3a1f2e), signMat, flat(0x3a1f2e)]);
       board.position.set(0, 0.5, 0);
       board.castShadow = true;
@@ -601,7 +609,18 @@ export class BoardScene {
       );
       ring.position.set(side * (TRAY_X + 0.55), 0.015, rowZ + 0.25);
       this.scene.add(ring);
-      this.teams.set(t.id, { sign, signMat, ring, side, rowZ, name: t.name, color: t.color });
+      // 완주 팀: 팻말 위 금/은/동 트로피 큐브
+      const trophy = new THREE.Group();
+      if (rank) {
+        const medal = [0xf2c744, 0xd9dde3, 0xd08a4a][rank - 1] ?? 0xf2c744;
+        trophy.add(cube(medal, 0, 1.05, 0, 0.22, 0.22, 0.22));
+        trophy.add(cube(medal, 0, 1.2, 0, 0.32, 0.08, 0.14, false));
+        trophy.add(cube(0x8e2a1f, 0, 0.9, 0, 0.1, 0.1, 0.1, false));
+        trophy.position.set(side * SIGN_X, 0, rowZ + 0.2);
+        trophy.userData.bobBase = 1;
+      }
+      this.scene.add(trophy);
+      this.teams.set(t.id, { sign, signMat, ring, trophy, rank, side, rowZ, name: t.name, color: t.color });
     });
   }
 
@@ -759,7 +778,7 @@ export class BoardScene {
 
   sync(state: GameState): void {
     this.lastState = state;
-    this.ensureTeams(state.teams);
+    this.ensureTeams(state.teams, state.finishOrder);
     this.ensurePieces(state);
     this.restYs.clear();
     for (const p of state.pieces) {
@@ -773,7 +792,7 @@ export class BoardScene {
   }
 
   async playEvents(state: GameState, events: GameEvent[]): Promise<void> {
-    this.ensureTeams(state.teams);
+    this.ensureTeams(state.teams, this.lastState?.finishOrder ?? []);
     this.ensurePieces(state);
     this.clearHighlights();
     this.animating = true;
@@ -1052,6 +1071,10 @@ export class BoardScene {
     }
     for (const [tid, tv] of this.teams) {
       tv.ring.material.opacity = tid === this.currentTeamId ? 0.45 + Math.sin(elapsed * 3) * 0.2 : 0;
+      if (tv.rank) {
+        tv.trophy.position.y = Math.sin(elapsed * 2.5 + tv.rowZ) * 0.06;
+        tv.trophy.rotation.y = elapsed * 1.2;
+      }
     }
     for (const c of this.highlightGroup.children) {
       if (c.userData.bob) c.position.y = c.userData.baseY ?? (c.userData.baseY = c.position.y);

@@ -18,8 +18,10 @@ function crisp(t: THREE.CanvasTexture): THREE.CanvasTexture {
   return t;
 }
 
-/** 팀 이름 간판 (픽셀 폰트, 팀 색 테두리) */
-export function signTexture(name: string, color: string, w = 512, h = 160): THREE.CanvasTexture {
+const RANK_COLORS = ['#f2c744', '#d9dde3', '#d08a4a'];
+
+/** 팀 이름 간판 (픽셀 폰트, 팀 색 테두리). rank 가 있으면 오른쪽에 순위 배지 */
+export function signTexture(name: string, color: string, rank: number | null = null, w = 512, h = 160): THREE.CanvasTexture {
   const [c, ctx] = canvas(w, h);
   ctx.fillStyle = '#3a1f2e';
   ctx.fillRect(0, 0, w, h);
@@ -35,13 +37,26 @@ export function signTexture(name: string, color: string, w = 512, h = 160): THRE
   ctx.fillStyle = '#fefefe';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
+  const badgeW = rank ? 120 : 0;
   let size = 60;
   ctx.font = `${size}px ${PIXEL_FONT}`;
-  while (ctx.measureText(name).width > w - 150 && size > 24) {
+  while (ctx.measureText(name).width > w - 150 - badgeW && size > 24) {
     size -= 4;
     ctx.font = `${size}px ${PIXEL_FONT}`;
   }
   ctx.fillText(name, 108, h / 2 + 4);
+  if (rank) {
+    const bx = w - 28 - badgeW + 8;
+    const badge = RANK_COLORS[rank - 1] ?? '#f2c744';
+    ctx.fillStyle = badge;
+    ctx.fillRect(bx, 34, badgeW - 16, h - 68);
+    ctx.fillStyle = '#1e0f17';
+    ctx.fillRect(bx + 6, 40, badgeW - 28, h - 80);
+    ctx.fillStyle = badge;
+    ctx.textAlign = 'center';
+    ctx.font = `52px ${PIXEL_FONT}`;
+    ctx.fillText(`${rank}위`, bx + (badgeW - 16) / 2, h / 2 + 4);
+  }
   return crisp(new THREE.CanvasTexture(c));
 }
 
