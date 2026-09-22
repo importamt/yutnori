@@ -54,7 +54,7 @@ export interface GameState {
   phase: Phase;
   /** 아직 말을 움직이지 않은 윷 결과들. 여러 개를 합쳐 한 번에 움직일 수 있다 */
   pending: YutResult[];
-  /** 이 차례에 남은 던지기 횟수 (차례 시작 1, 윷/모/잡기마다 +1, 낙이면 0) */
+  /** 이 차례에 남은 던지기 횟수 (차례 시작 1, 윷/모/잡기마다 +1, 낙이면 0 — 이미 나온 결과는 유지) */
   throwsLeft: number;
   quiz: QuizContext | null;
   finishOrder: string[];
@@ -222,9 +222,14 @@ export function inputThrow(state: GameState, result: YutResult): GameState {
   s = withLog(s, `${team.name}: ${info.label}`);
 
   if (result === 'nak') {
-    const voided = s.pending.length ? ` (${s.pending.map((r) => YUT_INFO[r].label).join('·')} 무효)` : '';
-    s = withLog({ ...s, pending: [], throwsLeft: 0 }, `${team.name}: 낙! 차례가 넘어갑니다.${voided}`);
-    return passTurn(s);
+    // 낙은 그 던지기만 무효. 이미 나온 결과(윷·윷 등)는 그대로 움직이고, 더 던질 수는 없다
+    s = { ...s, throwsLeft: 0 };
+    if (s.pending.length === 0) {
+      s = withLog(s, `${team.name}: 낙! 차례가 넘어갑니다.`);
+      return passTurn(s);
+    }
+    s = withLog(s, `${team.name}: 낙! 더 던질 수 없고 남은 결과(${s.pending.map((r) => YUT_INFO[r].label).join('·')})만 움직입니다.`);
+    return advance(s);
   }
 
   s = { ...s, pending: [...s.pending, result] };

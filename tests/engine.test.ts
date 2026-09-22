@@ -66,14 +66,17 @@ describe('throw input', () => {
     expect(s.pending).toEqual([]);
   });
 
-  it('낙 voids every pending result and ends the turn (윷윷윷낙 → 전부 무효)', () => {
+  it('낙 voids only itself: 윷윷낙 → 윷윷 still move, no more throws', () => {
     let s = inputThrow(game(), 'yut');
     s = inputThrow(s, 'yut');
-    s = inputThrow(s, 'yut');
     s = inputThrow(s, 'nak');
-    expect(s.pending).toEqual([]);
+    expect(s.pending).toEqual(['yut', 'yut']);
+    expect(s.throwsLeft).toBe(0);
+    expect(s.turnIndex).toBe(0);
+    expect(s.phase).toBe('move');
+    s = applyMove(s, [0, 1], movableOptions(s, ['yut', 'yut'])[0]); // 합쳐서 8칸
+    expect(s.pieces.find((p) => p.id === 't1-1')!.node).toBe('8');
     expect(s.turnIndex).toBe(1);
-    expect(s.phase).toBe('throw');
   });
 
   it('after 윷 the team may move first and still keep the bonus throw', () => {
