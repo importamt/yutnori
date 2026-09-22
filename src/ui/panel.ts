@@ -1,4 +1,3 @@
-import { ALL_NODE_IDS } from '../game/board';
 import { currentTeam, movableOptions, type AdminDest, type GameState, type MoveOption, type Team } from '../game/engine';
 import { YUT_INFO, YUT_ORDER, type YutResult } from '../game/yut';
 import type { MusicSource } from '../audio/engine';
@@ -6,6 +5,8 @@ import type { ViewPreset } from '../render/scene';
 import { clear, el } from './dom';
 
 export type Mode = 'play' | 'teams' | 'admin' | 'music';
+/** none: 없음 · movePick: 이동할 말 클릭 대기 · moveDest: 목적지 칸 클릭 대기 · teamPick: 팻말 클릭 대기 */
+export type AdminTool = 'none' | 'movePick' | 'moveDest' | 'teamPick';
 
 export interface PanelActions {
   throw: (r: YutResult) => void;
@@ -16,7 +17,7 @@ export interface PanelActions {
   adminSetTurn: (teamIndex: number) => void;
   adminExtraThrow: () => void;
   adminClearPending: () => void;
-  adminQuiz: (pieceId: string, questionId?: string) => void;
+  adminQuiz: (questionId?: string) => void;
   adminFinish: () => void;
   adminResume: () => void;
   updateTeam: (teamId: string, patch: Partial<Pick<Team, 'name' | 'color'>>) => void;
@@ -26,7 +27,8 @@ export interface PanelActions {
   importState: (file: File) => void;
   newGame: () => void;
   setView: (v: ViewPreset) => void;
-  setAdminMode: (on: boolean) => void;
+  /** 관리자 클릭 도구 변경 (판에서 말/칸/팻말을 클릭해 조작) */
+  setAdminTool: (tool: AdminTool) => void;
   togglePanel: () => void;
   music: {
     toggle: () => void;
@@ -55,11 +57,9 @@ export class Panel {
   readonly root: HTMLElement;
   mode: Mode = 'play';
   pendingIndex = 0;
-  adminMode = false;
+  adminTool: AdminTool = 'none';
   adminPiece: string | null = null;
-  private adminDest: AdminDest = 'HOME';
   private adminQuizQ = '';
-  private adminTeam = 0;
   private state: GameState | null = null;
   private music: MusicView | null = null;
   private canUndo = false;
@@ -79,8 +79,10 @@ export class Panel {
     this.render();
   }
 
-  setAdminPiece(id: string | null): void {
-    this.adminPiece = id;
+  setAdminState(tool: AdminTool, pieceId: string | null): void {
+    this.adminTool = tool;
+    this.adminPiece = pieceId;
+    if (tool !== 'none') this.mode = 'admin';
     this.render();
   }
 
@@ -222,62 +224,86 @@ export class Panel {
   // ───────────── 관리 ─────────────
 
   private renderAdmin(body: HTMLElement, s: GameState): void {
-    const pieceSel = el('select', { onChange: (e) => { this.adminPiece = (e.target as HTMLSelectElement).value || null; this.actions.setAdminMode(this.adminMode); this.render(); } });
-    pieceSel.append(el('option', { value: '' }, '말 선택…'));
-    for (const t of s.teams) {
-      const group = el('optgroup', { label: t.name });
-      for (const p of s.pieces.filter((x) => x.teamId === t.id)) {
-        group.append(el('option', { value: p.id, selected: this.adminPiece === p.id }, `${t.name} ${p.id.split('-')[1]} (${p.done ? '완주' : p.node ?? '집'})`));
-      }
-      pieceSel.append(group);
-    }
-    const destSel = el('select', { onChange: (e) => (this.adminDest = (e.target as HTMLSelectElement).value as AdminDest) });
-    destSel.append(el('option', { value: 'HOME', selected: this.adminDest === 'HOME' }, '집(대기)'));
-    destSel.append(el('option', { value: 'DONE', selected: this.adminDest === 'DONE' }, '완주'));
-    for (const n of ALL_NODE_IDS) destSel.append(el('option', { value: n, selected: this.adminDest === n }, n));
+    const tool = this.adminTool;
+    const pieceLabel = (id: string) => {
+      const p = s.pieces.find((x) => x.id === id);
+      const t = p && s.teams.find((x) => x.id === p.teamId);
+      return p && t ? `${t.name} ${id.split('-')[1]}번 (${p.done ? '완주' : p.node ?? '집'})` : id;
+    };
 
-    body.append(
-      el(
-        'div',
-        { class: 'box' },
-        el('div', { class: 'box-title' }, '말 이동', el('label', { class: 'switch' }, el('input', { type: 'checkbox', checked: this.adminMode, onChange: (e) => { this.adminMode = (e.target as HTMLInputElement).checked; this.actions.setAdminMode(this.adminMode); this.render(); } }), '판 클릭')),
-        el('div', { class: 'row2' }, pieceSel, destSel),
-        el('button', { class: 'pbtn primary', disabled: !this.adminPiece, onClick: () => this.adminPiece && this.actions.adminMove(this.adminPiece, this.adminDest) }, '이동'),
-        el('p', { class: 'hint' }, '판 클릭: 말 클릭 → 칸 클릭. 잡기·퀴즈 발동 없음.'),
-      ),
-    );
-
-    const teamSel = el('select', { onChange: (e) => (this.adminTeam = Number((e.target as HTMLSelectElement).value)) });
-    s.teams.forEach((t, i) => teamSel.append(el('option', { value: String(i), selected: i === this.adminTeam }, t.name)));
-    body.append(
-      el(
-        'div',
-        { class: 'box' },
-        el('div', { class: 'box-title' }, '차례'),
-        el('div', { class: 'row2' }, teamSel, el('button', { class: 'pbtn', onClick: () => this.actions.adminSetTurn(this.adminTeam) }, '이 팀 차례로')),
+    // 말 이동: 버튼 → 판에서 말 클릭 → 목적지 칸 클릭 (집/완주는 버튼)
+    const moveBox = el('div', { class: `box ${tool === 'movePick' || tool === 'moveDest' ? 'active' : ''}` }, el('div', { class: 'box-title' }, '말 이동'));
+    if (tool === 'movePick') {
+      moveBox.append(
+        el('p', { class: 'guide' }, '① 판이나 마당에서 이동할 말을 클릭하세요'),
+        el('button', { class: 'pbtn', onClick: () => this.actions.setAdminTool('none') }, '취소'),
+      );
+    } else if (tool === 'moveDest' && this.adminPiece) {
+      const id = this.adminPiece;
+      moveBox.append(
+        el('p', { class: 'guide' }, `선택: ${pieceLabel(id)}`),
+        el('p', { class: 'guide' }, '② 목적지 칸을 클릭하세요. 또는:'),
         el(
           'div',
           { class: 'row2' },
-          el('button', { class: 'pbtn', onClick: () => this.actions.adminExtraThrow() }, '한 번 더 부여'),
-          el('button', { class: 'pbtn', onClick: () => this.actions.adminClearPending() }, '대기 결과 삭제'),
+          el('button', { class: 'pbtn', onClick: () => this.actions.adminMove(id, 'HOME') }, '집으로'),
+          el('button', { class: 'pbtn', onClick: () => this.actions.adminMove(id, 'DONE') }, '완주 처리'),
         ),
-        s.phase === 'finished'
-          ? el('button', { class: 'pbtn', onClick: () => this.actions.adminResume() }, '게임 재개')
-          : el('button', { class: 'pbtn danger', onClick: () => this.actions.adminFinish() }, '게임 종료 (순위 확정)'),
-      ),
-    );
+        el(
+          'div',
+          { class: 'row2' },
+          el('button', { class: 'pbtn', onClick: () => this.actions.setAdminTool('movePick') }, '다른 말 선택'),
+          el('button', { class: 'pbtn', onClick: () => this.actions.setAdminTool('none') }, '취소'),
+        ),
+      );
+    } else {
+      moveBox.append(
+        el('button', { class: 'pbtn primary', onClick: () => this.actions.setAdminTool('movePick') }, '말 이동'),
+        el('p', { class: 'hint' }, '말을 클릭한 뒤 목적지 칸을 클릭. 잡기·퀴즈는 발동하지 않음.'),
+      );
+    }
+    body.append(moveBox);
 
+    // 차례: 버튼 → 팻말 클릭
+    const turnBox = el('div', { class: `box ${tool === 'teamPick' ? 'active' : ''}` }, el('div', { class: 'box-title' }, '차례'));
+    if (tool === 'teamPick') {
+      turnBox.append(
+        el('p', { class: 'guide' }, '차례로 만들 팀의 팻말을 클릭하세요'),
+        el('button', { class: 'pbtn', onClick: () => this.actions.setAdminTool('none') }, '취소'),
+      );
+    } else {
+      turnBox.append(
+        el(
+          'div',
+          { class: 'row2' },
+          el('button', { class: 'pbtn primary', onClick: () => this.actions.setAdminTool('teamPick') }, '차례 선택'),
+          el('button', { class: 'pbtn', onClick: () => this.actions.adminExtraThrow() }, '한 번 더 부여'),
+        ),
+        el(
+          'div',
+          { class: 'row2' },
+          el('button', { class: 'pbtn', onClick: () => this.actions.adminClearPending() }, '대기 결과 삭제'),
+          s.phase === 'finished'
+            ? el('button', { class: 'pbtn', onClick: () => this.actions.adminResume() }, '게임 재개')
+            : el('button', { class: 'pbtn danger', onClick: () => this.actions.adminFinish() }, '게임 종료'),
+        ),
+      );
+    }
+    body.append(turnBox);
+
+    // 퀴즈 수동 출제: 문제 선택 → 노출
     const qSel = el('select', { onChange: (e) => (this.adminQuizQ = (e.target as HTMLSelectElement).value) });
     qSel.append(el('option', { value: '' }, '무작위 (미출제 우선)'));
     for (const q of s.questions) qSel.append(el('option', { value: q.id, selected: this.adminQuizQ === q.id }, `${s.usedQuestionIds.includes(q.id) ? '✓ ' : ''}${q.id}: ${q.text.slice(0, 18)}…`));
-    const onBoard = this.adminPiece ? s.pieces.find((p) => p.id === this.adminPiece)?.node : null;
+    const team = s.teams[s.turnIndex];
     body.append(
       el(
         'div',
         { class: 'box' },
         el('div', { class: 'box-title' }, `퀴즈 수동 출제 (${s.usedQuestionIds.length}/${s.questions.length})`),
         qSel,
-        el('button', { class: 'pbtn primary', disabled: !onBoard, onClick: () => this.adminPiece && this.actions.adminQuiz(this.adminPiece, this.adminQuizQ || undefined) }, onBoard ? `${onBoard} 칸 말에 출제` : '위에서 판 위의 말을 선택'),
+        el('button', { class: 'pbtn primary', disabled: s.phase === 'quiz' || !s.questions.length, onClick: () => this.actions.adminQuiz(this.adminQuizQ || undefined) }, `${team?.name ?? ''}에게 노출`),
+        el('p', { class: 'hint' }, '결과(+2/-2)는 현재 팀의 판 위 말이 하나일 때 자동 적용, 아니면 이동 없이 기록만.'),
       ),
     );
 

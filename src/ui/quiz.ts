@@ -25,7 +25,7 @@ export class QuizModal {
     return !this.root.classList.contains('hidden');
   }
 
-  open(q: Question, teamName: string, teamColor: string, _node: string): void {
+  open(q: Question, teamName: string, teamColor: string): void {
     this.question = q;
     this.chosen = null;
     this.render(teamName, teamColor);

@@ -13,7 +13,7 @@ const DEFAULT_COLORS = ['#2f6fd6', '#e05a47', '#f7c02c', '#2f9c6a', '#7a4bd1', '
 export class SetupScreen {
   readonly root: HTMLElement;
   private count = 8;
-  private pieces = 2;
+  private pieces = 1;
   private names: string[] = [...DEFAULT_NAMES];
   private colors: string[] = [...DEFAULT_COLORS];
 

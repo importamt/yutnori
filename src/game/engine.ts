@@ -20,10 +20,11 @@ export interface Piece {
 export type Phase = 'throw' | 'move' | 'quiz' | 'finished';
 
 export interface QuizContext {
-  pieceId: string;
+  /** 결과(+2/-2)를 적용할 말. 수동 출제로 특정 말이 없으면 null → 현재 팀의 판 위 말이 하나일 때만 적용 */
+  pieceId: string | null;
   teamId: string;
   questionId: string;
-  node: NodeId;
+  node: NodeId | null;
   /** 오퍼레이터가 선택한 보기 (판정 후) */
   chosen?: number;
   correct?: boolean;
@@ -34,7 +35,7 @@ export type GameEvent =
   | { type: 'catch'; pieceIds: string[]; byTeamId: string; node: NodeId }
   | { type: 'finish'; pieceIds: string[]; teamId: string }
   | { type: 'teamFinished'; teamId: string; rank: number }
-  | { type: 'quiz'; pieceId: string; node: NodeId }
+  | { type: 'quiz'; pieceId: string | null; node: NodeId | null }
   | { type: 'quizResult'; correct: boolean; teamId: string }
   | { type: 'throw'; result: YutResult; teamId: string }
   | { type: 'turn'; teamId: string; extra: boolean }
@@ -343,10 +344,16 @@ export function answerQuiz(state: GameState, choiceIndex: number): GameState {
     seq: state.seq + 1,
   };
   s = withLog(s, `${teamName(s, state.quiz.teamId)}: ${correct ? '정답! +2' : '오답… -2'}`);
-  const piece = findPiece(s, state.quiz.pieceId);
   const steps = correct ? QUIZ_BONUS_STEPS : QUIZ_PENALTY_STEPS;
-  if (!piece.done && piece.node !== null) {
-    const stack = s.pieces.filter((p) => p.node === piece.node && p.teamId === piece.teamId).map((p) => p.id);
+  let piece: Piece | null = state.quiz.pieceId ? findPiece(s, state.quiz.pieceId) : null;
+  if (!piece) {
+    const onBoard = teamPieces(s, state.quiz.teamId).filter((p) => p.node !== null && !p.done);
+    const nodes = new Set(onBoard.map((p) => p.node));
+    if (nodes.size === 1) piece = onBoard[0];
+    else s = withLog(s, nodes.size === 0 ? '판 위에 말이 없어 이동은 생략합니다.' : '판 위 말이 여러 개라 이동은 생략합니다. 필요하면 말 이동으로 조정하세요.');
+  }
+  if (piece && !piece.done && piece.node !== null) {
+    const stack = s.pieces.filter((p) => p.node === piece!.node && p.teamId === piece!.teamId).map((p) => p.id);
     s = performMove(s, stack, steps, 'quiz').state;
   }
   s = { ...s, quiz: null };
@@ -418,23 +425,30 @@ export function adminClearPending(state: GameState): GameState {
   return withLog(s, '🛠 관리자: 대기 중인 결과 삭제');
 }
 
-export function adminOpenQuiz(state: GameState, pieceId: string, questionId?: string): GameState {
-  const piece = findPiece(state, pieceId);
-  if (piece.node === null) return state;
+/** 수동 출제: 문제를 지정하거나(없으면 무작위) 현재 팀에게 바로 보여준다 */
+export function adminOpenQuiz(state: GameState, questionId?: string): GameState {
+  if (state.questions.length === 0) return state;
+  const team = currentTeam(state);
   let s: GameState = { ...state, events: [], seq: state.seq + 1 };
-  if (questionId) {
-    const exists = s.questions.some((q) => q.id === questionId);
-    if (!exists) return state;
-    s = {
-      ...s,
-      phase: 'quiz',
-      quiz: { pieceId, teamId: piece.teamId, questionId, node: piece.node },
-      usedQuestionIds: s.usedQuestionIds.includes(questionId) ? s.usedQuestionIds : [...s.usedQuestionIds, questionId],
-      events: [{ type: 'quiz', pieceId, node: piece.node }],
-    };
-    return withLog(s, `🛠 관리자: ${teamName(s, piece.teamId)} 수동 퀴즈 출제`);
+  let qid = questionId;
+  let used = s.usedQuestionIds;
+  if (qid) {
+    if (!s.questions.some((q) => q.id === qid)) return state;
+    if (!used.includes(qid)) used = [...used, qid];
+  } else {
+    const picked = pickQuestion(s);
+    if (!picked) return state;
+    qid = picked.questionId;
+    used = picked.used;
   }
-  return openQuiz(s, pieceId, piece.node);
+  s = {
+    ...s,
+    phase: 'quiz',
+    usedQuestionIds: used,
+    quiz: { pieceId: null, teamId: team.id, questionId: qid, node: null },
+    events: [{ type: 'quiz', pieceId: null, node: null }],
+  };
+  return withLog(s, `🛠 관리자: ${team.name}에게 수동 퀴즈 출제`);
 }
 
 export function adminUpdateTeam(state: GameState, teamId: string, patch: Partial<Pick<Team, 'name' | 'color'>>): GameState {

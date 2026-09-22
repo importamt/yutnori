@@ -52,7 +52,7 @@ body {
 .stage canvas { display: block; width: 100% !important; height: 100% !important; cursor: grab; }
 .tilt { position: absolute; left: 0; right: 0; pointer-events: none; backdrop-filter: blur(2.5px); -webkit-backdrop-filter: blur(2.5px); }
 .tilt.top { top: 0; height: 22%; mask-image: linear-gradient(#000, transparent); -webkit-mask-image: linear-gradient(#000, transparent); }
-.tilt.bottom { bottom: 0; height: 18%; mask-image: linear-gradient(transparent, #000); -webkit-mask-image: linear-gradient(transparent, #000); }
+.tilt.bottom { bottom: 0; height: 9%; mask-image: linear-gradient(transparent, #000); -webkit-mask-image: linear-gradient(transparent, #000); }
 
 /* 상단 HUD */
 .banner {
@@ -120,6 +120,8 @@ body {
 .yut.nak { grid-column: span 3; background: var(--maple); color: #fff; }
 
 .box { padding: 10px; background: var(--navy-2); border: 2px solid var(--navy-3); display: flex; flex-direction: column; gap: 8px; }
+.box.active { border-color: var(--yellow); box-shadow: 0 0 0 2px rgba(242,199,68,0.35); }
+.guide { margin: 0; font-size: 14px; color: var(--yellow); line-height: 1.5; }
 .box-title { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--yellow); letter-spacing: 1px; }
 .pending { display: flex; gap: 6px; flex-wrap: wrap; }
 .pend { padding: 4px 12px; border: 2px solid var(--line); background: transparent; color: var(--text); font: inherit; font-size: 16px; cursor: pointer; }

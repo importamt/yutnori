@@ -13,8 +13,7 @@ const BOARD_SCALE = 2.6;
 const NODE_SIZE = 0.62;
 const NODE_H = 0.22;
 const TILE = 0.5;
-const CHAR_H = 0.62;
-const STACK_DY = CHAR_H;
+const STACK_DY = 0.88;
 const TRAY_X = 5.9;
 const SIGN_X = 4.5;
 const HOP_MS = 280;
@@ -49,6 +48,11 @@ const C = {
   hanbokWhite: 0xfbf3e4,
   hair: 0x2a1c1a,
   ribbon: 0xd9472b,
+  tving: 0xff153c,
+  rabbit: 0xfdfaf4,
+  rabbitPink: 0xf7a8b8,
+  mortar: 0x5a3a22,
+  rice: 0xfff6e8,
   water: 0x63b7f2,
   waterB: 0x7cc8f7,
   wall: 0xf1e2c6,
@@ -70,7 +74,6 @@ interface TeamView {
   sign: THREE.Group;
   signMat: THREE.MeshBasicMaterial;
   ring: THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial>;
-  pouch: THREE.Group;
   side: -1 | 1;
   rowZ: number;
   name: string;
@@ -87,6 +90,7 @@ interface Tween {
 export interface SceneCallbacks {
   onPieceClick?: (pieceId: string) => void;
   onNodeClick?: (nodeId: NodeId) => void;
+  onTeamClick?: (teamId: string) => void;
   onOptionClick?: (index: number) => void;
   onHop?: () => void;
 }
@@ -346,10 +350,10 @@ export class BoardScene {
   }
 
   /** 복주머니 소품 */
-  private pouch(x: number, z: number, scale = 1): void {
+  private pouch(x: number, z: number, scale = 1, rotY = 0.2): void {
     const g = new THREE.Group();
     this.pouchInto(g, scale);
-    g.rotation.y = 0.2;
+    g.rotation.y = rotY;
     g.position.set(x, 0, z);
     this.scene.add(g);
   }
@@ -362,6 +366,93 @@ export class BoardScene {
     g.add(cube(C.gold, -0.14 * scale, 0.66 * scale, 0, 0.08 * scale, 0.22 * scale, 0.08 * scale, false));
     g.add(cube(C.gold, 0.14 * scale, 0.66 * scale, 0, 0.08 * scale, 0.22 * scale, 0.08 * scale, false));
     g.add(cube(C.gold, 0, 0.3 * scale, 0.19 * scale, 0.14 * scale, 0.14 * scale, 0.02 * scale, false));
+  }
+
+
+  private rabbits: Array<{ arm: THREE.Group; phase: number }> = [];
+
+  /** 절구 찧는 달토끼: 방망이는 frame() 에서 위아래로 움직인다 */
+  private rabbit(x: number, z: number, rotY: number, phase: number): void {
+    const g = new THREE.Group();
+    const white = flat(C.rabbit);
+    const pink = flat(C.rabbitPink);
+    // 절구 + 떡 (토끼 앞)
+    g.add(cube(C.mortar, 0, 0.18, 0.62, 0.44, 0.36, 0.44));
+    g.add(cube(0x7a5230, 0, 0.37, 0.62, 0.36, 0.04, 0.36, false));
+    g.add(cube(C.rice, 0, 0.38, 0.62, 0.26, 0.05, 0.26, false));
+    // 몸통/머리
+    g.add(cube(C.rabbit, 0, 0.26, 0, 0.42, 0.4, 0.36));
+    g.add(cube(C.rabbit, 0, 0.62, 0, 0.36, 0.3, 0.32));
+    g.add(cube(0x1d1d1d, -0.08, 0.66, 0.165, 0.05, 0.06, 0.01, false));
+    g.add(cube(0x1d1d1d, 0.08, 0.66, 0.165, 0.05, 0.06, 0.01, false));
+    g.add(cube(C.rabbitPink, 0, 0.58, 0.165, 0.06, 0.04, 0.01, false));
+    // 귀
+    for (const dx of [-0.1, 0.1]) {
+      const ear = new THREE.Mesh(BOX, white);
+      ear.scale.set(0.1, 0.42, 0.08);
+      ear.position.set(dx, 0.98, -0.02);
+      ear.castShadow = true;
+      g.add(ear);
+      const inner = new THREE.Mesh(BOX, pink);
+      inner.scale.set(0.05, 0.3, 0.02);
+      inner.position.set(dx, 0.98, 0.03);
+      g.add(inner);
+    }
+    // 발
+    g.add(cube(C.rabbit, -0.14, 0.05, 0.12, 0.16, 0.1, 0.22));
+    g.add(cube(C.rabbit, 0.14, 0.05, 0.12, 0.16, 0.1, 0.22));
+    // 두 팔을 앞으로 뻗어 절굿공이(세로 막대)를 잡고, 팔 전체가 위아래로 움직이며 찧는다
+    const arm = new THREE.Group();
+    arm.position.set(0, 0.46, 0.14);
+    arm.add(cube(C.rabbit, -0.17, 0, 0.22, 0.1, 0.1, 0.44)); // 팔
+    arm.add(cube(C.rabbit, 0.17, 0, 0.22, 0.1, 0.1, 0.44));
+    arm.add(cube(C.rabbit, -0.08, 0, 0.46, 0.09, 0.12, 0.12)); // 손
+    arm.add(cube(C.rabbit, 0.08, 0, 0.46, 0.09, 0.12, 0.12));
+    arm.add(cube(C.trunk, 0, 0.02, 0.48, 0.07, 0.62, 0.07)); // 절굿공이 (손 위로 솟고 아래로 절구까지)
+    arm.add(cube(0x6f4a2c, 0, -0.34, 0.48, 0.16, 0.16, 0.16)); // 공이 머리 (아래, 절구 속)
+    arm.add(cube(0x6f4a2c, 0, 0.36, 0.48, 0.1, 0.06, 0.1, false)); // 손잡이 끝
+    g.add(arm);
+    this.rabbits.push({ arm, phase });
+    g.rotation.y = rotY;
+    g.position.set(x, 0, z);
+    this.scene.add(g);
+  }
+
+  /** TVING 워드마크를 픽셀 비트맵으로 세운 복셀 글자 (V: 왼쪽 세로 기둥 + 오른쪽 사선, G: 위 오른쪽 사선 컷 + 가운데 가로대) */
+  private buildTvingLogo(cx: number, z: number): void {
+    const glyphs: string[][] = [
+      ['1111111', '1111111', '0011100', '0011100', '0011100', '0011100', '0011100', '0011100', '0011100'],
+      ['1100011', '1100011', '1100011', '1100110', '1100110', '1101100', '1101100', '1111000', '1111000'],
+      ['111', '111', '111', '111', '111', '111', '111', '111', '111'],
+      ['1100011', '1110011', '1111011', '1101111', '1100111', '1100011', '1100011', '1100011', '1100011'],
+      ['00111100', '01111110', '11100011', '11000000', '11000000', '11001111', '11000011', '01111111', '00111110'],
+    ];
+    const u = 0.08;
+    const gap = 1;
+    const totalCols = glyphs.reduce((n, g) => n + g[0].length, 0) + gap * (glyphs.length - 1);
+    const x0 = cx - (totalCols * u) / 2 + u / 2;
+    const mat = new THREE.MeshStandardMaterial({ color: C.tving, roughness: 0.55, emissive: 0x7a0a1c, emissiveIntensity: 0.25 });
+    const group = new THREE.Group();
+    let colOffset = 0;
+    for (const rows of glyphs) {
+      rows.forEach((row, r) => {
+        for (let col = 0; col < row.length; col++) {
+          if (row[col] !== '1') continue;
+          const m = new THREE.Mesh(BOX, mat);
+          m.scale.set(u, u, u * 1.8);
+          m.position.set(x0 + (colOffset + col) * u, (rows.length - r - 0.5) * u + 0.08, 0);
+          m.castShadow = true;
+          m.receiveShadow = true;
+          group.add(m);
+        }
+      });
+      colOffset += rows[0].length + gap;
+    }
+    const base = cube(0x4a2839, cx, 0.04, 0.02, totalCols * u + 0.5, 0.08, u * 1.8 + 0.5);
+    group.add(base);
+    group.rotation.x = -0.12;
+    group.position.set(0, 0, z);
+    this.scene.add(group);
   }
 
   private house(x: number, z: number, rotY: number): void {
@@ -396,8 +487,21 @@ export class BoardScene {
     }
     this.scene.add(cube(C.fence, 0, 0.42, -7.2, 11.4, 0.1, 0.08));
     this.scene.add(cube(C.fence, 0, 0.2, -7.2, 11.4, 0.1, 0.08));
-    // 울타리 위 복주머니 장식
+    // 복주머니: 울타리 위 + 마당 곳곳에 흩어 놓기
     for (const x of [-4.5, 0, 4.5]) this.pouch(x, -7.2, 0.9);
+    const pouches: Array<[number, number, number, number]> = [
+      [-9.3, 0.2, 0.8, 0.4], [-8.6, -2.4, 0.7, -0.5], [-10.2, 5.6, 0.9, 1.1], [9.6, 0.4, 0.8, -0.3], [8.9, -2.6, 0.7, 0.8],
+      [10.4, 5.8, 0.9, -1.0], [-6.2, -5.4, 0.75, 0.2], [6.4, -5.5, 0.75, -0.6], [-7.4, 5.6, 0.7, 0.9], [7.6, 5.7, 0.7, -0.8],
+      [-11.0, -4.2, 0.8, 0.3], [11.2, 2.2, 0.75, 0.6],
+    ];
+    for (const [x, z, sc, rot] of pouches) this.pouch(x, z, sc, rot);
+
+    // 절구 찧는 달토끼 (앞쪽 양옆)
+    this.rabbit(-3.5, 4.95, 0.5, 0);
+    this.rabbit(3.5, 4.95, -0.5, Math.PI * 0.6);
+
+    // 판 뒤쪽: TVING 복셀 3D 로고
+    this.buildTvingLogo(0, -5.3);
 
     // 한가위 보름달 + 구름 (멀리, 안개 영향 없음)
     const moon = new THREE.Mesh(new THREE.CircleGeometry(3.2, 8), new THREE.MeshBasicMaterial({ color: C.moon, fog: false }));
@@ -457,7 +561,6 @@ export class BoardScene {
     for (const v of this.teams.values()) {
       this.scene.remove(v.sign);
       this.scene.remove(v.ring);
-      this.scene.remove(v.pouch);
     }
     this.teams.clear();
 
@@ -476,6 +579,7 @@ export class BoardScene {
       const board = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.48, 0.08), [flat(0x3a1f2e), flat(0x3a1f2e), flat(0x3a1f2e), flat(0x3a1f2e), signMat, flat(0x3a1f2e)]);
       board.position.set(0, 0.5, 0);
       board.castShadow = true;
+      board.userData.teamId = t.id;
       sign.add(board);
       sign.add(cube(C.trunk, -0.55, 0.14, -0.02, 0.09, 0.28, 0.09));
       sign.add(cube(C.trunk, 0.55, 0.14, -0.02, 0.09, 0.28, 0.09));
@@ -490,24 +594,25 @@ export class BoardScene {
       );
       ring.position.set(side * (TRAY_X + 0.55), 0.015, rowZ + 0.25);
       this.scene.add(ring);
-      const pouch = new THREE.Group();
-      this.pouchInto(pouch, 0.8);
-      pouch.position.set(side * (TRAY_X + 1.45), 0, rowZ - 0.4);
-      this.scene.add(pouch);
-      this.teams.set(t.id, { sign, signMat, ring, pouch, side, rowZ, name: t.name, color: t.color });
+      this.teams.set(t.id, { sign, signMat, ring, side, rowZ, name: t.name, color: t.color });
     });
   }
 
-  /** 한복 차림 복셀 캐릭터 말: 흰 저고리 + 팀 색 치마/깃/고름, 검은 머리 + 댕기 */
-  private makeCharacter(color: string): { group: THREE.Group; body: PieceView['body']; hat: PieceView['hat'] } {
+  /**
+   * 한복 차림 복셀 캐릭터 말.
+   * 여자 한복(흰 저고리 + 팀 색 치마 + 댕기) / 남자 한복(팀 색 조끼 + 바지 + 갓).
+   * 성별은 팀 순서와 말 번호로 번갈아 정한다: 1팀 1번 남, 2팀 1번 여, … 같은 팀 안에서는 1번 남·2번 여·3번 남·4번 여 (짝수 팀은 반대)
+   */
+  private makeCharacter(color: string, female: boolean): { group: THREE.Group; body: PieceView['body']; hat: PieceView['hat'] } {
     const g = new THREE.Group();
     const c = new THREE.Color(color);
     const dark = c.clone().multiplyScalar(0.72);
-    const skirtMat = new THREE.MeshStandardMaterial({ color: c, roughness: 0.9 });
+    const teamMat = new THREE.MeshStandardMaterial({ color: c, roughness: 0.9 });
     const trimMat = new THREE.MeshStandardMaterial({ color: dark, roughness: 0.9 });
-    const jeogori = flat(C.hanbokWhite);
+    const white = flat(C.hanbokWhite);
     const skin = flat(0xf7d6b0);
     const shoes = flat(0x2f2a3a);
+    const hairMat = flat(C.hair);
     const box = (mat: THREE.Material, x: number, y: number, z: number, sx: number, sy: number, sz: number, shadow = true) => {
       const m = new THREE.Mesh(BOX, mat);
       m.position.set(x, y, z);
@@ -516,32 +621,51 @@ export class BoardScene {
       g.add(m);
       return m;
     };
-    // 신발 (버선코)
-    box(shoes, -0.09, 0.03, 0.04, 0.12, 0.06, 0.16);
-    box(shoes, 0.09, 0.03, 0.04, 0.12, 0.06, 0.16);
-    // 치마: 아래가 넓게 두 단
-    const skirt = box(skirtMat, 0, 0.13, 0, 0.4, 0.16, 0.34) as PieceView['body'];
-    box(skirtMat, 0, 0.27, 0, 0.34, 0.12, 0.28);
-    // 저고리 (흰색) + 깃/고름 (팀 색)
-    box(jeogori, 0, 0.4, 0, 0.32, 0.16, 0.26);
-    box(trimMat, 0, 0.42, 0.135, 0.06, 0.14, 0.02, false); // 깃
-    box(trimMat, 0.07, 0.36, 0.14, 0.05, 0.1, 0.02, false); // 고름
-    // 팔 (흰 소매, 팀 색 끝동)
-    box(jeogori, -0.21, 0.4, 0, 0.1, 0.16, 0.12);
-    box(jeogori, 0.21, 0.4, 0, 0.1, 0.16, 0.12);
-    box(trimMat, -0.21, 0.32, 0, 0.11, 0.04, 0.13, false);
-    box(trimMat, 0.21, 0.32, 0, 0.04 + 0.07, 0.04, 0.13, false);
-    // 머리
-    box(skin, 0, 0.62, 0, 0.3, 0.26, 0.28);
+    let body: THREE.Mesh;
+    let hat: THREE.Mesh;
+
+    if (female) {
+      box(shoes, -0.09, 0.03, 0.04, 0.12, 0.06, 0.16);
+      box(shoes, 0.09, 0.03, 0.04, 0.12, 0.06, 0.16);
+      body = box(teamMat, 0, 0.13, 0, 0.4, 0.16, 0.34); // 치마 (아랫단)
+      box(teamMat, 0, 0.27, 0, 0.34, 0.12, 0.28);
+      box(white, 0, 0.4, 0, 0.32, 0.16, 0.26); // 저고리
+      box(trimMat, 0, 0.42, 0.135, 0.06, 0.14, 0.02, false); // 깃
+      box(trimMat, 0.07, 0.36, 0.14, 0.05, 0.1, 0.02, false); // 고름
+      box(white, -0.21, 0.4, 0, 0.1, 0.16, 0.12);
+      box(white, 0.21, 0.4, 0, 0.1, 0.16, 0.12);
+      box(trimMat, -0.21, 0.32, 0, 0.11, 0.04, 0.13, false);
+      box(trimMat, 0.21, 0.32, 0, 0.11, 0.04, 0.13, false);
+      box(skin, 0, 0.62, 0, 0.3, 0.26, 0.28);
+      hat = box(hairMat, 0, 0.76, 0, 0.32, 0.1, 0.3); // 머리
+      box(hairMat, 0, 0.68, -0.13, 0.32, 0.12, 0.05, false);
+      box(trimMat, 0, 0.5, -0.17, 0.08, 0.3, 0.03, false); // 댕기
+      box(flat(C.gold), 0, 0.8, 0, 0.1, 0.05, 0.1, false);
+    } else {
+      box(shoes, -0.09, 0.03, 0.04, 0.12, 0.06, 0.16);
+      box(shoes, 0.09, 0.03, 0.04, 0.12, 0.06, 0.16);
+      box(white, -0.09, 0.15, 0, 0.14, 0.18, 0.16); // 바지
+      box(white, 0.09, 0.15, 0, 0.14, 0.18, 0.16);
+      box(trimMat, -0.09, 0.07, 0, 0.15, 0.04, 0.17, false); // 대님
+      box(trimMat, 0.09, 0.07, 0, 0.15, 0.04, 0.17, false);
+      box(white, 0, 0.36, 0, 0.32, 0.22, 0.26); // 저고리
+      body = box(teamMat, 0, 0.36, 0, 0.36, 0.2, 0.3); // 조끼
+      box(white, 0, 0.4, 0.155, 0.06, 0.14, 0.02, false); // 깃
+      box(flat(C.gold), 0, 0.3, 0.16, 0.06, 0.06, 0.02, false); // 단추
+      box(white, -0.22, 0.38, 0, 0.1, 0.18, 0.12);
+      box(white, 0.22, 0.38, 0, 0.1, 0.18, 0.12);
+      box(trimMat, -0.22, 0.29, 0, 0.11, 0.04, 0.13, false);
+      box(trimMat, 0.22, 0.29, 0, 0.11, 0.04, 0.13, false);
+      box(skin, 0, 0.6, 0, 0.3, 0.26, 0.28);
+      box(hairMat, 0, 0.72, 0, 0.3, 0.06, 0.28, false); // 망건
+      hat = box(hairMat, 0, 0.77, 0, 0.5, 0.04, 0.46); // 갓 양태(챙)
+      box(hairMat, 0, 0.88, 0, 0.22, 0.18, 0.2); // 갓 모자
+      box(trimMat, 0, 0.75, 0.24, 0.5, 0.02, 0.02, false); // 갓끈
+    }
     const face = new THREE.Mesh(new THREE.PlaneGeometry(0.28, 0.24), new THREE.MeshBasicMaterial({ map: this.faceTex, transparent: true }));
-    face.position.set(0, 0.62, 0.145);
+    face.position.set(0, female ? 0.62 : 0.6, 0.145);
     g.add(face);
-    // 검은 머리 + 댕기 (뒤로 늘어진 팀 색 리본)
-    const hair = box(flat(C.hair), 0, 0.76, 0, 0.32, 0.1, 0.3) as PieceView['hat'];
-    box(flat(C.hair), 0, 0.68, -0.13, 0.32, 0.12, 0.05, false);
-    box(trimMat, 0, 0.5, -0.17, 0.08, 0.3, 0.03, false); // 댕기
-    box(flat(C.gold), 0, 0.8, 0, 0.1, 0.05, 0.1, false); // 배씨댕기 장식
-    return { group: g, body: skirt, hat: hair };
+    return { group: g, body: body as PieceView['body'], hat: hat as PieceView['hat'] };
   }
 
   private ensurePieces(state: GameState): void {
@@ -563,7 +687,10 @@ export class BoardScene {
         }
         continue;
       }
-      const { group, body, hat } = this.makeCharacter(team.color);
+      const idx = Number(p.id.split('-')[1]) || 1;
+      const teamIndex = state.teams.findIndex((t) => t.id === p.teamId);
+      const female = (teamIndex + idx) % 2 === 0;
+      const { group, body, hat } = this.makeCharacter(team.color, female);
       group.traverse((o) => (o.userData.pieceId = p.id));
       this.scene.add(group);
       this.pieces.set(p.id, { group, body, hat, teamId: p.teamId, color: team.color });
@@ -647,7 +774,7 @@ export class BoardScene {
       for (const ev of events) {
         if (ev.type === 'move') await this.animateMove(state, ev.pieceIds, ev.path);
         else if (ev.type === 'catch') await this.animateCatch(state, ev.pieceIds, ev.node);
-        else if (ev.type === 'quiz') this.burst(this.nodeWorld(ev.node), 0xffd75e, 30);
+        else if (ev.type === 'quiz' && ev.node) this.burst(this.nodeWorld(ev.node), 0xffd75e, 30);
         else if (ev.type === 'teamFinished') {
           const tv = this.teams.get(ev.teamId);
           if (tv) this.burst(new THREE.Vector3(tv.side * (TRAY_X + 1.45), 0.5, tv.rowZ), 0xffe08a, 70);
@@ -806,6 +933,7 @@ export class BoardScene {
     this.raycaster.setFromCamera(this.pointer, this.camera);
     const objects: THREE.Object3D[] = [...this.highlightGroup.children, ...this.nodeMeshes.values()];
     for (const v of this.pieces.values()) objects.push(v.group);
+    for (const t of this.teams.values()) objects.push(t.sign);
     return this.raycaster.intersectObjects(objects, true);
   }
 
@@ -828,6 +956,10 @@ export class BoardScene {
         this.callbacks.onNodeClick?.(d.nodeId as NodeId);
         return;
       }
+      if (typeof d.teamId === 'string') {
+        this.callbacks.onTeamClick?.(d.teamId);
+        return;
+      }
     }
   }
 
@@ -836,7 +968,11 @@ export class BoardScene {
     const hits = this.pick(e);
     const interactive = hits.some((h) => {
       const d = h.object.userData;
-      return typeof d.optionIndex === 'number' || (typeof d.pieceId === 'string' && (this.selectable.has(d.pieceId) || this.adminMode)) || (this.adminMode && typeof d.nodeId === 'string');
+      return (
+        typeof d.optionIndex === 'number' ||
+        (typeof d.pieceId === 'string' && (this.selectable.has(d.pieceId) || this.adminMode)) ||
+        (this.adminMode && (typeof d.nodeId === 'string' || typeof d.teamId === 'string'))
+      );
     });
     this.renderer.domElement.style.cursor = interactive ? 'pointer' : 'grab';
   }
@@ -862,6 +998,14 @@ export class BoardScene {
     for (const tw of finished) tw.resolve();
 
     this.quizMaterial.emissiveIntensity = 0.25 + Math.sin(elapsed * 2.5) * 0.15;
+    for (const r of this.rabbits) {
+      // 들 때는 뒤쪽 위로 비스듬히, 내릴 때는 앞쪽 아래로 (부드러운 sin 곡선)
+      const t = Math.max(0, Math.sin(elapsed * 3.0 + r.phase));
+      const e = t * t * (3 - 2 * t);
+      r.arm.position.y = 0.46 + e * 0.24;
+      r.arm.position.z = 0.14 - e * 0.1;
+      r.arm.rotation.x = -e * 0.4;
+    }
 
     for (const [id, v] of this.pieces) {
       const mat = v.body.material;

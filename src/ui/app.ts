@@ -25,7 +25,7 @@ import { YUT_INFO, type YutResult } from '../game/yut';
 import { BoardScene } from '../render/scene';
 import { SAMPLE_QUESTIONS } from '../data/sampleQuestions';
 import { append, clear, downloadText, el, pouchIcon, readFileText } from './dom';
-import { Panel } from './panel';
+import { Panel, type AdminTool } from './panel';
 import { QuizModal } from './quiz';
 import { SetupScreen } from './setup';
 
@@ -139,7 +139,7 @@ export class App {
       const team = state.teams.find((t) => t.id === state.quiz!.teamId)!;
       if (q && !this.quiz.isOpen) {
         if (events.some((e) => e.type === 'quiz')) this.audio.sfxQuizOpen();
-        this.quiz.open(q, team.name, team.color, state.quiz.node);
+        this.quiz.open(q, team.name, team.color);
       }
     }
     if (events.some((e) => e.type === 'turn' && !e.extra) && state.phase === 'throw') this.audio.sfxTurn();
@@ -225,11 +225,14 @@ export class App {
         this.store.undo();
       },
       endTurn: () => d(adminEndTurn),
-      adminMove: (pieceId: string, dest: Parameters<typeof adminMovePiece>[2]) => d((s) => adminMovePiece(s, pieceId, dest)),
+      adminMove: (pieceId: string, dest: Parameters<typeof adminMovePiece>[2]) => {
+        d((s) => adminMovePiece(s, pieceId, dest));
+        this.setAdminTool('none', null);
+      },
       adminSetTurn: (i: number) => d((s) => adminSetTurn(s, i)),
       adminExtraThrow: () => d(adminGrantExtraThrow),
       adminClearPending: () => d(adminClearPending),
-      adminQuiz: (pieceId: string, qid?: string) => d((s) => adminOpenQuiz(s, pieceId, qid)),
+      adminQuiz: (qid?: string) => d((s) => adminOpenQuiz(s, qid)),
       adminFinish: () => d(adminFinishGame),
       adminResume: () => d(adminResume),
       updateTeam: (id: string, patch: { name?: string; color?: string }) => d((s) => adminUpdateTeam(s, id, patch)),
@@ -259,10 +262,7 @@ export class App {
         this.setup.show(false, null);
       },
       setView: (v: Parameters<BoardScene['setView']>[0]) => this.scene.setView(v),
-      setAdminMode: (on: boolean) => {
-        this.scene.adminMode = on;
-        this.scene.markSelected(on ? this.panel.adminPiece : null);
-      },
+      setAdminTool: (tool: AdminTool) => this.setAdminTool(tool, tool === 'moveDest' ? this.panel.adminPiece : null),
       togglePanel: () => this.togglePanel(),
       music: {
         toggle: () => this.audio.toggle(),
@@ -290,9 +290,13 @@ export class App {
       onPieceClick: (pieceId) => {
         const s = this.store.current;
         if (!s) return;
-        if (this.panel.adminMode) {
-          this.panel.setAdminPiece(pieceId);
-          this.scene.markSelected(pieceId);
+        if (this.panel.adminTool === 'movePick' || this.panel.adminTool === 'moveDest') {
+          this.setAdminTool('moveDest', pieceId);
+          return;
+        }
+        if (this.panel.adminTool === 'teamPick') {
+          const piece = s.pieces.find((p) => p.id === pieceId);
+          if (piece) this.pickTeam(piece.teamId);
           return;
         }
         const cur = this.panel.currentOptions();
@@ -301,11 +305,29 @@ export class App {
         if (opt) this.store.dispatch((st) => applyMove(st, this.panel.pendingIndex, opt));
       },
       onNodeClick: (nodeId: NodeId) => {
-        if (!this.panel.adminMode || !this.panel.adminPiece || this.busy) return;
+        if (this.panel.adminTool !== 'moveDest' || !this.panel.adminPiece || this.busy) return;
         const id = this.panel.adminPiece;
         this.store.dispatch((s) => adminMovePiece(s, id, nodeId));
+        this.setAdminTool('none', null);
+      },
+      onTeamClick: (teamId: string) => {
+        if (this.panel.adminTool === 'teamPick') this.pickTeam(teamId);
       },
     };
+  }
+
+  private setAdminTool(tool: AdminTool, pieceId: string | null): void {
+    this.panel.setAdminState(tool, pieceId);
+    this.scene.adminMode = tool !== 'none';
+    this.scene.markSelected(pieceId);
+  }
+
+  private pickTeam(teamId: string): void {
+    const s = this.store.current;
+    if (!s) return;
+    const idx = s.teams.findIndex((t) => t.id === teamId);
+    if (idx >= 0) this.store.dispatch((st) => adminSetTurn(st, idx));
+    this.setAdminTool('none', null);
   }
 
   private heldKeys = new Set<string>();
