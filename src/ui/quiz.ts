@@ -98,7 +98,7 @@ export class QuizModal {
       choices.append(
         el(
           'button',
-          { class: 'choice unrevealed', 'data-i': String(i), disabled: true, onClick: () => this.reveal(i) },
+          { class: `choice unrevealed ${c.imageSize === 'small' ? 'img-small' : ''}`, 'data-i': String(i), disabled: true, onClick: () => this.reveal(i) },
           c.images?.length
             ? el('div', { class: `choice-imgs n${c.images.length}` }, ...c.images.map((src) => el('img', { class: 'choice-img', src, alt: '' })))
             : c.image

@@ -237,6 +237,9 @@ details summary { cursor: pointer; }
 .choice-imgs.n2 .choice-img { max-width: 48%; }
 /* 보기 글이 길면 2열로 넓게 */
 .choices.long-text { grid-template-columns: repeat(2, 1fr) !important; }
+/* 로고처럼 작게 보여줄 보기 사진 (아이콘 크기 고정) */
+.choice.img-small .choice-img { width: 72px; height: 72px; max-height: none; object-fit: contain; margin: 0 auto; padding: 6px; background: #fff; }
+.choices.n5 .choice.img-small .choice-img, .choices.n6 .choice.img-small .choice-img { width: 56px; height: 56px; }
 .choices.long-text.with-images .choice { flex-direction: row; align-items: center; }
 .choices.long-text.with-images .choice-img { width: 30%; max-height: 18vh; flex: 0 0 30%; aspect-ratio: 1; object-fit: cover; }
 .choices.long-text.with-images .choice-row { flex: 1; min-width: 0; }

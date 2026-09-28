@@ -7,6 +7,8 @@ export interface Choice {
   images?: string[];
   /** 사진 대신 쓰는 아이콘(이모지 등, 선택) */
   icon?: string;
+  /** 사진 표시 크기 (선택). 'small' = 로고처럼 작게 */
+  imageSize?: 'small' | 'normal';
 }
 
 export interface Question {
@@ -38,6 +40,7 @@ export function toChoice(raw: unknown): Choice {
     image: typeof c?.image === 'string' && c.image ? c.image : undefined,
     images: images.length ? images : undefined,
     icon: typeof c?.icon === 'string' && c.icon ? c.icon : undefined,
+    imageSize: c?.imageSize === 'small' ? 'small' : undefined,
   };
 }
 
