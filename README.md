@@ -43,7 +43,7 @@ yarn test       # 규칙 엔진 테스트
 
 ## 문제 교체
 
-`public/questions.json` 을 만들면 샘플 대신 자동으로 사용합니다. 형식은 `public/questions.example.json` 참고.
+`public/questions.json` 을 만들면 샘플 대신 자동으로 사용합니다. 출제는 파일에 적힌 순서대로 진행되고, 다 쓰면 처음부터 다시 나옵니다. 형식은 `public/questions.example.json` 참고.
 사진은 `public/quiz/` 에 넣고 문제 대표 사진은 `"image"`, 보기별 사진은 각 보기를 `{ "text": "...", "image": "quiz/파일명.jpg" }` 객체로 적어 지정(둘 다 선택). 게임 중 🛠 관리에서 JSON 파일을 직접 불러올 수도 있습니다.
 
 ## 규칙 요약

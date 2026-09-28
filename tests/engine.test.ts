@@ -291,7 +291,7 @@ describe('quiz squares', () => {
     expect(s.pieces.find((p) => p.id === 't1-1')!.done).toBe(true);
   });
 
-  it('uses each question once before recycling', () => {
+  it('serves questions in file order, each once, before recycling', () => {
     let s = game(4);
     const seen = new Set<string>();
     for (let i = 0; i < SAMPLE_QUESTIONS.length; i++) {
@@ -300,6 +300,7 @@ describe('quiz squares', () => {
       s = inputThrow(s, 'gae');
       s = applyMove(s, [0], optFrom(s, ['gae'], '4'));
       expect(s.phase).toBe('quiz');
+      expect(s.quiz!.questionId).toBe(SAMPLE_QUESTIONS[i].id);
       seen.add(s.quiz!.questionId);
       const q = SAMPLE_QUESTIONS.find((x) => x.id === s.quiz!.questionId)!;
       s = answerQuiz(s, (q.answer + 1) % q.choices.length);

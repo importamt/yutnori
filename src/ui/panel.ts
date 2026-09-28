@@ -366,7 +366,7 @@ export class Panel {
 
     // 퀴즈 수동 출제: 문제 선택 → 노출
     const qSel = el('select', { onChange: (e) => (this.adminQuizQ = (e.target as HTMLSelectElement).value) });
-    qSel.append(el('option', { value: '' }, '무작위 (미출제 우선)'));
+    qSel.append(el('option', { value: '' }, '다음 순서 (아직 안 나온 첫 문제)'));
     for (const q of s.questions) qSel.append(el('option', { value: q.id, selected: this.adminQuizQ === q.id }, `${s.usedQuestionIds.includes(q.id) ? '✓ ' : ''}${q.id}: ${q.text.slice(0, 18)}…`));
     const team = s.teams[s.turnIndex];
     body.append(

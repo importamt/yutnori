@@ -308,6 +308,7 @@ function performMove(
   return { state: s, landedQuiz };
 }
 
+/** 다음 문제: 파일 순서대로 아직 안 나온 첫 문제. 다 쓰면 처음부터 다시 */
 function pickQuestion(state: GameState): { questionId: string; used: string[] } | null {
   if (state.questions.length === 0) return null;
   let used = state.usedQuestionIds;
@@ -316,7 +317,7 @@ function pickQuestion(state: GameState): { questionId: string; used: string[] } 
     used = [];
     candidates = state.questions;
   }
-  const q = candidates[Math.floor(Math.random() * candidates.length)];
+  const q = candidates[0];
   return { questionId: q.id, used: [...used, q.id] };
 }
 
