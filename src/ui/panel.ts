@@ -461,8 +461,12 @@ const QUESTION_FORMAT = `[
   {
     "id": "q1",
     "text": "문제 내용",
-    "image": "quiz/photo.jpg",
-    "choices": ["보기1", "보기2", "보기3"],
+    "image": "quiz/photo.jpg",          // 대표 사진 (선택)
+    "choices": [
+      { "text": "보기1", "image": "quiz/a.jpg" },  // 보기 사진 (선택)
+      "보기2",                            // 글만 있어도 됨
+      "보기3"
+    ],
     "answer": 0,
     "explanation": "해설 (선택)"
   }

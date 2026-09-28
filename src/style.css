@@ -201,7 +201,8 @@ details summary { cursor: pointer; }
 
 /* 퀴즈 모달 */
 .quiz-overlay { position: absolute; inset: 0; z-index: 15; display: flex; align-items: center; justify-content: center; background: rgba(14, 21, 38, 0.55); backdrop-filter: blur(3px); }
-.quiz-card { width: min(1100px, calc(100vw - var(--panel-w) - 64px)); max-height: 92vh; overflow: auto; padding: 22px 28px 18px; border-color: var(--yellow); animation: pop 0.3s steps(5); }
+.quiz-card { width: min(1100px, calc(100vw - var(--panel-w) - 64px)); max-height: 94vh; overflow: auto; padding: 18px 26px 14px; border-color: var(--yellow); animation: pop 0.3s steps(5); display: flex; flex-direction: column; }
+.quiz-card .quiz-foot { margin-top: auto; }
 .panel-hidden .quiz-card { width: min(1200px, 92vw); }
 @keyframes pop { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 .quiz-head { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; flex-wrap: wrap; }
@@ -216,12 +217,29 @@ details summary { cursor: pointer; }
 .choices { display: grid; gap: 10px; grid-template-columns: repeat(2, 1fr); }
 .choices.n3, .choices.n5, .choices.n6 { grid-template-columns: repeat(3, 1fr); }
 .choice {
-  display: flex; align-items: center; gap: 12px; padding: 12px 14px; text-align: left;
+  display: flex; flex-direction: column; align-items: stretch; gap: 8px; padding: 12px 14px; text-align: left;
   border: 3px solid var(--line); box-shadow: 0 0 0 2px var(--outline); background: var(--navy-2); color: var(--text);
   font: inherit; font-size: clamp(16px, 1.5vw, 22px); cursor: pointer; word-break: keep-all;
 }
 .choice:hover:not(:disabled) { background: var(--navy-3); border-color: var(--yellow); }
+.choice-row { display: flex; align-items: center; gap: 12px; }
 .choice .letter { flex: 0 0 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; background: var(--yellow); color: #1d1d1d; }
+.choice-img { width: 100%; max-height: 18vh; object-fit: contain; background: #fff; border: 2px solid var(--outline); }
+.choices.n5 .choice-img, .choices.n6 .choice-img { max-height: 11vh; }
+.choices.with-images .choice { padding: 8px 10px; gap: 6px; }
+.quiz-body.compact .quiz-image img { max-height: 24vh; }
+.quiz-body.compact .quiz-text { font-size: clamp(18px, 1.9vw, 26px); }
+.quiz-head .quiz-guide { margin-left: auto; }
+.quiz-head .quiz-rule { margin-left: 16px; }
+.choices.with-images { grid-template-columns: repeat(3, 1fr); }
+.choices.with-images.n2 { grid-template-columns: repeat(2, 1fr); }
+.choices.with-images.n4 { grid-template-columns: repeat(4, 1fr); }
+/* 아직 안 나온 보기: 자리만 차지 */
+.choice.unrevealed { visibility: hidden; }
+.choice.revealed { animation: choice-pop 0.28s steps(4); }
+@keyframes choice-pop { from { transform: translateY(14px) scale(0.92); opacity: 0; } to { transform: none; opacity: 1; } }
+.quiz-guide { font-size: 15px; color: var(--muted); }
+.quiz-guide.ready { color: var(--yellow); }
 .choice:hover:not(:disabled) .letter { background: var(--maple); color: #fff; }
 .choice.correct { background: var(--green-2); border-color: #8ef08a; }
 .choice.correct .letter { background: #8ef08a; }
@@ -229,6 +247,7 @@ details summary { cursor: pointer; }
 .choice.wrong .letter { background: var(--red); color: #fff; }
 .choice.dim { opacity: 0.4; }
 .choice:disabled { cursor: default; }
+.choice.revealed:disabled:not(.correct):not(.wrong):not(.dim) { cursor: default; opacity: 1; }
 .quiz-foot { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-top: 18px; min-height: 56px; }
 .quiz-actions { display: flex; gap: 10px; align-items: center; }
 .verdict { font-size: 28px; text-shadow: 2px 2px 0 var(--outline); }
