@@ -266,8 +266,13 @@ export class App {
         try {
           const qs = validateQuestions(JSON.parse(await readFileText(file)));
           this.questions = qs;
+          try {
+            localStorage.setItem(QUESTIONS_KEY, JSON.stringify(qs));
+          } catch {
+            /* 저장 실패해도 이번 세션에는 적용됨 */
+          }
           d((s) => setQuestions(s, qs));
-          this.toast('문제 불러옴', `${qs.length}개`, 'ok');
+          this.toast('문제 불러옴', `${qs.length}개 · 이 브라우저에 보관됨`, 'ok');
         } catch (e) {
           alert(`문제 파일 오류: ${(e as Error).message}`);
         }
@@ -457,8 +462,22 @@ export class App {
     this.root.classList.toggle('panel-hidden', this.panelHidden);
   }
 
-  /** public/questions.json 이 있으면 샘플 대신 사용 */
+  /** 우선순위: 관리 화면에서 불러와 브라우저에 보관된 문제 > public/questions.json > 내장 샘플 */
   private async loadQuestionFile(): Promise<void> {
+    try {
+      const stored = localStorage.getItem(QUESTIONS_KEY);
+      if (stored) {
+        const qs = validateQuestions(JSON.parse(stored));
+        if (qs.length) {
+          this.questions = qs;
+          const cur = this.store.current;
+          if (cur && cur.questions === SAMPLE_QUESTIONS) this.store.dispatch((s) => setQuestions(s, qs));
+          return;
+        }
+      }
+    } catch {
+      /* 보관된 문제가 깨졌으면 무시 */
+    }
     try {
       const res = await fetch(`${import.meta.env.BASE_URL}questions.json`, { cache: 'no-store' });
       if (!res.ok) return;
@@ -473,6 +492,8 @@ export class App {
     }
   }
 }
+
+const QUESTIONS_KEY = 'yutnori.questions.v1';
 
 function summarizePending(pending: YutResult[]): string {
   const counts = new Map<YutResult, number>();

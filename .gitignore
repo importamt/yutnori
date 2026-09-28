@@ -5,3 +5,6 @@ dist
 .pnp.*
 *.log
 .DS_Store
+
+# 실제 행사 문제(동료 사진·개인 정보) — 공개 레포에 올리지 않음
+public/questions.json
