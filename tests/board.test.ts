@@ -17,7 +17,7 @@ describe('board definition', () => {
   });
 
   it('marks the yellow quiz nodes from the reference image', () => {
-    expect([...QUIZ_NODES].sort()).toEqual(['12', '16', '19', '6', '9', 'A2', 'B3'].sort());
+    expect([...QUIZ_NODES].sort()).toEqual(['3', '6', '8', '11', '13', '17', '19', 'A1', 'A3'].sort());
   });
 });
 

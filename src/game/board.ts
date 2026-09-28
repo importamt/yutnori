@@ -34,7 +34,7 @@ export interface BoardNode {
   label: string;
 }
 
-export const QUIZ_NODES: ReadonlySet<NodeId> = new Set<NodeId>(['6', '9', '12', '16', '19', 'A2', 'B3']);
+export const QUIZ_NODES: ReadonlySet<NodeId> = new Set<NodeId>(['3', '6', '8', '11', '13', '17', '19', 'A1', 'A3']);
 
 const T = 1 / 3;
 

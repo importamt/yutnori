@@ -66,16 +66,16 @@ describe('throw input', () => {
     expect(s.pending).toEqual([]);
   });
 
-  it('낙 voids only itself: 윷윷낙 → 윷윷 still move, no more throws', () => {
-    let s = inputThrow(game(), 'yut');
-    s = inputThrow(s, 'yut');
+  it('낙 voids only itself: 모모낙 → 모모 still move, no more throws', () => {
+    let s = inputThrow(game(), 'mo');
+    s = inputThrow(s, 'mo');
     s = inputThrow(s, 'nak');
-    expect(s.pending).toEqual(['yut', 'yut']);
+    expect(s.pending).toEqual(['mo', 'mo']);
     expect(s.throwsLeft).toBe(0);
     expect(s.turnIndex).toBe(0);
     expect(s.phase).toBe('move');
-    s = applyMove(s, [0, 1], movableOptions(s, ['yut', 'yut'])[0]); // 합쳐서 8칸
-    expect(s.pieces.find((p) => p.id === 't1-1')!.node).toBe('8');
+    s = applyMove(s, [0, 1], movableOptions(s, ['mo', 'mo'])[0]); // 합쳐서 10칸
+    expect(s.pieces.find((p) => p.id === 't1-1')!.node).toBe('10');
     expect(s.turnIndex).toBe(1);
   });
 
@@ -163,18 +163,18 @@ describe('movable options', () => {
 
 describe('moving, catching and stacking', () => {
   it('moves a piece and passes the turn after a plain result', () => {
-    let s = inputThrow(game(), 'geol');
-    s = applyMove(s, [0], movableOptions(s, ['geol'])[0]);
-    expect(s.pieces.find((p) => p.id === 't1-1')!.node).toBe('3');
+    let s = inputThrow(game(), 'gae');
+    s = applyMove(s, [0], movableOptions(s, ['gae'])[0]);
+    expect(s.pieces.find((p) => p.id === 't1-1')!.node).toBe('2');
     expect(s.turnIndex).toBe(1);
     expect(s.phase).toBe('throw');
   });
 
   it('catching an opponent sends it home and grants an extra throw', () => {
     let s = game();
-    s = placePiece(s, 't2-1', '3');
-    s = inputThrow(s, 'geol');
-    s = applyMove(s, [0], movableOptions(s, ['geol'])[0]); // 새 말 출발 → 3
+    s = placePiece(s, 't2-1', '2');
+    s = inputThrow(s, 'gae');
+    s = applyMove(s, [0], movableOptions(s, ['gae'])[0]); // 새 말 출발 → 2
     expect(s.pieces.find((p) => p.id === 't2-1')!.node).toBeNull();
     expect(s.turnIndex).toBe(0);
     expect(s.phase).toBe('throw');
@@ -268,15 +268,16 @@ describe('quiz squares', () => {
 
   it('a bonus move landing on another quiz square does not re-trigger a quiz', () => {
     let s = game();
-    s = placePiece(s, 't1-1', '7'); // 개 -> 9 (quiz), +2 -> 11 ; -1 -> 8
-    s = placePiece(s, 't1-2', '10'); // dummy, unaffected
+    s = placePiece(s, 't1-1', '9'); // 개 -> 11 (quiz), +2 -> 13 (also quiz)
+    s = placePiece(s, 't1-2', '15'); // dummy, unaffected
     s = inputThrow(s, 'gae');
-    const opt = movableOptions(s, ['gae']).find((o) => o.kind === 'piece' && o.from === '7')!;
+    const opt = movableOptions(s, ['gae']).find((o) => o.kind === 'piece' && o.from === '9')!;
     s = applyMove(s, [0], opt);
     expect(s.phase).toBe('quiz');
     const q = SAMPLE_QUESTIONS.find((x) => x.id === s.quiz!.questionId)!;
-    // wrong: 9 -> 8. 8 is not quiz, so simply check phase is not quiz afterwards
-    s = answerQuiz(s, (q.answer + 1) % q.choices.length);
+    // correct: 11 -> 13 lands on another quiz square, but no re-trigger
+    s = answerQuiz(s, q.answer);
+    expect(s.pieces.find((p) => p.id === 't1-1')!.node).toBe('13');
     expect(s.phase).not.toBe('quiz');
   });
 
