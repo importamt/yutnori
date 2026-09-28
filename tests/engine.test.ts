@@ -344,23 +344,27 @@ describe('ranking at game end', () => {
     expect(remainingSteps({ node: '1', trail: ['1'], done: true })).toBe(0);
   });
 
-  it('ranks finished teams first, then by closeness; shortcut wins ties (B4 over 19)', () => {
+  it('ranks finished teams first, then by closeness; equal remaining steps share a rank (B4 and 19)', () => {
     let s = game(1);
     s = placePiece(s, 't1-1', '19');
     s = placePiece(s, 't2-1', 'B4');
     s = placePiece(s, 't3-1', 'DONE');
     const r = computeRanking(s);
-    expect(r.map((e) => e.teamId)).toEqual(['t3', 't2', 't1']);
-    expect(r[0]).toMatchObject({ rank: 1, finished: true });
-    expect(r[1]).toMatchObject({ rank: 2, remaining: 1, onShortcut: true });
-    expect(r[2]).toMatchObject({ rank: 3, remaining: 1, onShortcut: false });
+    expect(r[0]).toMatchObject({ teamId: 't3', rank: 1, finished: true, tied: false });
+    expect(r[1]).toMatchObject({ rank: 2, remaining: 1, tied: true });
+    expect(r[2]).toMatchObject({ rank: 2, remaining: 1, tied: true });
+    expect(new Set([r[1].teamId, r[2].teamId])).toEqual(new Set(['t1', 't2']));
   });
 
-  it('teams still at home rank last', () => {
+  it('teams still at home share the last rank; rank numbers skip after a tie (1, 2, 2, 4)', () => {
     let s = game(1);
     s = placePiece(s, 't1-1', '2');
     const r = computeRanking(s);
-    expect(r[0].teamId).toBe('t1');
-    expect(r.slice(1).every((e) => e.remaining === 20)).toBe(true);
+    expect(r[0]).toMatchObject({ teamId: 't1', rank: 1, tied: false });
+    expect(r.slice(1).every((e) => e.remaining === 20 && e.rank === 2 && e.tied)).toBe(true);
+    s = placePiece(s, 't2-1', '19');
+    s = placePiece(s, 't3-1', 'B4');
+    const r2 = computeRanking(s);
+    expect(r2.map((e) => e.rank)).toEqual([1, 1, 3]);
   });
 });

@@ -564,8 +564,9 @@ export class BoardScene {
 
   // ───────────── 팀 / 말 뷰 ─────────────
 
-  private ensureTeams(teams: Team[], finishOrder: string[] = []): void {
+  private ensureTeams(teams: Team[], finishOrder: string[] = [], allRanks?: Map<string, number>): void {
     const rankOf = (id: string) => {
+      if (allRanks) return allRanks.get(id) ?? null;
       const i = finishOrder.indexOf(id);
       return i >= 0 ? i + 1 : null;
     };
@@ -832,8 +833,10 @@ export class BoardScene {
   sync(state: GameState): void {
     this.lastState = state;
     // 게임 종료 시에는 전체 순위(미완주 팀 포함)를 팻말에 표시
-    const order = state.phase === 'finished' ? computeRanking(state).map((e) => e.teamId) : state.finishOrder;
-    this.ensureTeams(state.teams, order);
+    if (state.phase === 'finished') {
+      const ranks = new Map(computeRanking(state).map((e) => [e.teamId, e.rank]));
+      this.ensureTeams(state.teams, state.finishOrder, ranks);
+    } else this.ensureTeams(state.teams, state.finishOrder);
     this.ensurePieces(state);
     this.restYs.clear();
     for (const p of state.pieces) {

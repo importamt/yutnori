@@ -226,15 +226,15 @@ export class App {
     clear(this.results);
     const rows = ranking.map((e) => {
       const team = s.teams.find((t) => t.id === e.teamId)!;
-      const medal = ['🥇', '🥈', '🥉'][e.rank - 1];
+      const medal = e.tied ? undefined : ['🥇', '🥈', '🥉'][e.rank - 1];
       let status: string;
       if (e.finished) status = '완주';
       else if (e.node === null) status = e.donePieces ? `완주 ${e.donePieces}/${e.totalPieces} · 나머지 집` : '집 (출발 전)';
-      else status = `${e.node === 'S' ? '출발점' : `${e.node} 칸`} · 골인까지 ${e.remaining}칸${e.onShortcut ? ' · 지름길' : ''}${e.totalPieces > 1 ? ` · 완주 ${e.donePieces}/${e.totalPieces}` : ''}`;
+      else status = `${e.node === 'S' ? '출발점' : `${e.node} 칸`} · 골인까지 ${e.remaining}칸${e.totalPieces > 1 ? ` · 완주 ${e.donePieces}/${e.totalPieces}` : ''}`;
       return el(
         'li',
         { class: `rank-row r${Math.min(e.rank, 4)} ${e.finished ? 'fin' : ''}` },
-        el('span', { class: 'rank-no' }, medal ?? `${e.rank}위`),
+        el('span', { class: 'rank-no' }, medal ?? `${e.tied ? '공동 ' : ''}${e.rank}위`),
         el('i', { class: 'sq', style: `background:${team.color}` }),
         el('span', { class: 'rank-team' }, team.name),
         el('span', { class: 'rank-status' }, status),
@@ -244,7 +244,7 @@ export class App {
       el(
         'div',
         { class: 'results-card rpg' },
-        el('div', { class: 'results-head' }, pouchIcon(), el('h2', {}, '최종 순위'), el('span', { class: 'muted' }, '완주 순서 → 골인까지 남은 칸 (같으면 지름길 우선)')),
+        el('div', { class: 'results-head' }, pouchIcon(), el('h2', {}, '최종 순위'), el('span', { class: 'muted' }, '완주 순서 → 골인까지 남은 칸 (같으면 공동 순위)')),
         el('ol', { class: 'rank-list' }, ...rows),
         el(
           'div',

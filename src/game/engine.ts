@@ -398,8 +398,10 @@ export interface RankEntry {
   remaining: number;
   /** 가장 앞선 말의 위치 (null = 집 또는 완주) */
   node: NodeId | null;
-  /** 가장 앞선 말이 지름길(A·B·방) 위에 있는가 — 남은 칸이 같으면 우선 */
+  /** 가장 앞선 말이 지름길(A·B·방) 위에 있는가 (표시용) */
   onShortcut: boolean;
+  /** 같은 순위를 나눠 가진 팀이 있는가 (공동 순위) */
+  tied: boolean;
 }
 
 const HOME_REMAINING = 20;
@@ -419,8 +421,9 @@ const isShortcutNode = (node: NodeId | null): boolean => !!node && /^[ABC]/.test
 
 /**
  * 현재 상태 기준 전체 순위.
- * 1) 모든 말을 완주한 팀은 완주 순서대로
- * 2) 나머지는 완주한 말 수 ↓ → 가장 앞선 말의 남은 칸 ↑ → 남은 칸이 같으면 지름길 위 말 우선 → 팀 순서
+ * 1) 모든 말을 완주한 팀은 완주 순서대로 (각자 고유 순위)
+ * 2) 나머지는 완주한 말 수 ↓ → 가장 앞선 말의 남은 칸 ↑. 두 값이 같으면 공동 순위 (지름길 여부 무관, 출발 전 팀끼리도 공동)
+ * 순위 번호는 1, 2, 2, 4 방식 (공동 순위 다음 번호는 건너뜀)
  */
 export function computeRanking(state: GameState): RankEntry[] {
   const entries: RankEntry[] = state.teams.map((t) => {
@@ -445,6 +448,7 @@ export function computeRanking(state: GameState): RankEntry[] {
       remaining: best ? bestRem : 0,
       node: best?.node ?? null,
       onShortcut: isShortcutNode(best?.node ?? null),
+      tied: false,
     };
   });
   const finishedOrder = (id: string) => {
@@ -457,10 +461,17 @@ export function computeRanking(state: GameState): RankEntry[] {
     if (a.finished && b.finished) return finishedOrder(a.teamId) - finishedOrder(b.teamId);
     if (a.donePieces !== b.donePieces) return b.donePieces - a.donePieces;
     if (a.remaining !== b.remaining) return a.remaining - b.remaining;
-    if (a.onShortcut !== b.onShortcut) return a.onShortcut ? -1 : 1;
     return teamIndex(a.teamId) - teamIndex(b.teamId);
   });
-  entries.forEach((e, i) => (e.rank = i + 1));
+  // 공동 순위: 완주하지 않은 팀끼리 (완주 말 수, 남은 칸) 이 같으면 같은 순위
+  const sameGroup = (a: RankEntry, b: RankEntry) => !a.finished && !b.finished && a.donePieces === b.donePieces && a.remaining === b.remaining;
+  entries.forEach((e, i) => {
+    if (i > 0 && sameGroup(e, entries[i - 1])) e.rank = entries[i - 1].rank;
+    else e.rank = i + 1;
+  });
+  entries.forEach((e, i) => {
+    e.tied = (i > 0 && sameGroup(e, entries[i - 1])) || (i < entries.length - 1 && sameGroup(e, entries[i + 1]));
+  });
   return entries;
 }
 

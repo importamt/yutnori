@@ -193,7 +193,7 @@ details summary { cursor: pointer; }
 .rank-row.r1 { border-color: #f2c744; background: #5a3a1e; font-size: 24px; }
 .rank-row.r2 { border-color: #d9dde3; background: #4a3d4a; font-size: 21px; }
 .rank-row.r3 { border-color: #d08a4a; background: #4d3128; font-size: 20px; }
-.rank-no { flex: 0 0 64px; text-align: center; font-weight: 700; }
+.rank-no { flex: 0 0 84px; text-align: center; font-weight: 700; font-size: 0.8em; }
 .rank-team { font-weight: 700; }
 .rank-status { margin-left: auto; font-size: 13px; color: var(--muted); text-align: right; }
 .rank-row.fin .rank-status { color: #8ef08a; }
