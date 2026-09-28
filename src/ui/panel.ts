@@ -463,9 +463,10 @@ const QUESTION_FORMAT = `[
     "text": "문제 내용",
     "image": "quiz/photo.jpg",          // 대표 사진 (선택)
     "choices": [
-      { "text": "보기1", "image": "quiz/a.jpg" },  // 보기 사진 (선택)
-      "보기2",                            // 글만 있어도 됨
-      "보기3"
+      { "text": "보기1", "image": "quiz/a.jpg" },   // 보기 사진 (선택)
+      { "text": "보기2", "images": ["a.jpg","b.jpg"] }, // 사진 여러 장
+      { "text": "보기3", "icon": "🥊" },              // 아이콘
+      "보기4"                                        // 글만
     ],
     "answer": 0,
     "explanation": "해설 (선택)"

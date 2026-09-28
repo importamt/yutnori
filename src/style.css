@@ -231,6 +231,15 @@ details summary { cursor: pointer; }
 .quiz-body.compact .quiz-text { font-size: clamp(18px, 1.9vw, 26px); }
 .quiz-head .quiz-guide { margin-left: auto; }
 .quiz-head .quiz-rule { margin-left: 16px; }
+.choice { min-width: 0; }
+.choice-imgs { display: flex; gap: 6px; justify-content: center; min-width: 0; }
+.choice-imgs .choice-img { width: 100%; flex: 1 1 0; min-width: 0; aspect-ratio: 1; object-fit: cover; max-height: none; }
+.choice-imgs.n2 .choice-img { max-width: 48%; }
+/* 보기마다 사진이 여러 장이면 2열로 넓게 */
+.choices.with-images:has(.choice-imgs.n3), .choices.with-images:has(.choice-imgs.n4) { grid-template-columns: repeat(2, 1fr); }
+.choices.with-images:has(.choice-imgs.n4) .choice-img { max-height: 12vh; }
+.choice-icon { font-size: 1.5em; line-height: 1; margin-right: 2px; }
+.quiz-icon { flex: 0 0 auto; font-size: clamp(64px, 9vw, 120px); line-height: 1; padding: 8px 20px; }
 .choices.with-images { grid-template-columns: repeat(3, 1fr); }
 .choices.with-images.n2 { grid-template-columns: repeat(2, 1fr); }
 .choices.with-images.n4 { grid-template-columns: repeat(4, 1fr); }

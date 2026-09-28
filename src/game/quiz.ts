@@ -3,6 +3,10 @@ export interface Choice {
   text: string;
   /** 보기 사진 URL (선택). public/ 기준 상대 경로 또는 data URI */
   image?: string;
+  /** 사진 여러 장 (선택) — 짝짓기·순서 문제처럼 인물이 여럿일 때 나란히 표시 */
+  images?: string[];
+  /** 사진 대신 쓰는 아이콘(이모지 등, 선택) */
+  icon?: string;
 }
 
 export interface Question {
@@ -11,6 +15,8 @@ export interface Question {
   text: string;
   /** 문제 대표 이미지 URL (선택). public/ 기준 상대 경로 또는 data URI */
   image?: string;
+  /** 대표 이미지 대신 쓰는 아이콘(이모지 등, 선택) */
+  icon?: string;
   /** 2~6개 보기. JSON 에서는 문자열 또는 { text, image } 객체 */
   choices: Choice[];
   /** 정답 인덱스 (0-based) */
@@ -26,7 +32,13 @@ export const QUIZ_PENALTY_STEPS = -2;
 export function toChoice(raw: unknown): Choice {
   if (typeof raw === 'string') return { text: raw };
   const c = raw as Partial<Choice>;
-  return { text: String(c?.text ?? ''), image: typeof c?.image === 'string' && c.image ? c.image : undefined };
+  const images = Array.isArray(c?.images) ? c.images.filter((x): x is string => typeof x === 'string' && !!x) : [];
+  return {
+    text: String(c?.text ?? ''),
+    image: typeof c?.image === 'string' && c.image ? c.image : undefined,
+    images: images.length ? images : undefined,
+    icon: typeof c?.icon === 'string' && c.icon ? c.icon : undefined,
+  };
 }
 
 export function validateQuestions(input: unknown): Question[] {
@@ -45,6 +57,7 @@ export function validateQuestions(input: unknown): Question[] {
       id: typeof q.id === 'string' && q.id ? q.id : `q${i + 1}`,
       text: q.text,
       image: typeof q.image === 'string' && q.image ? q.image : undefined,
+      icon: typeof q.icon === 'string' && q.icon ? q.icon : undefined,
       choices: q.choices.map(toChoice),
       answer: q.answer,
       explanation: typeof q.explanation === 'string' ? q.explanation : undefined,

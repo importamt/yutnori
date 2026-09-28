@@ -4,9 +4,9 @@
     "text": "문제 내용. 대표 사진은 image 에, 보기 사진은 각 보기의 image 에 넣습니다 (둘 다 선택).",
     "image": "quiz/q3-taegeuk.svg",
     "choices": [
-      { "text": "보기 1", "image": "quiz/c-blue.svg" },
-      { "text": "보기 2", "image": "quiz/c-red.svg" },
-      { "text": "보기 3" },
+      { "text": "보기 1 (사진 한 장)", "image": "quiz/c-blue.svg" },
+      { "text": "보기 2 (사진 여러 장)", "images": ["quiz/c-red.svg", "quiz/c-yellow.svg"] },
+      { "text": "보기 3 (아이콘)", "icon": "🥊" },
       "보기 4 (문자열만 써도 됨)"
     ],
     "answer": 0,

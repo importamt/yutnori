@@ -90,15 +90,26 @@ export class QuizModal {
   private render(teamName: string, teamColor: string): void {
     const q = this.question!;
     clear(this.root);
-    const hasChoiceImage = q.choices.some((c) => c.image);
-    const choices = el('div', { class: `choices n${q.choices.length} ${hasChoiceImage ? 'with-images' : ''}` });
+    const hasChoiceImage = q.choices.some((c) => c.image || c.images?.length);
+    const hasChoiceIcon = q.choices.some((c) => c.icon);
+    const choices = el('div', { class: `choices n${q.choices.length} ${hasChoiceImage ? 'with-images' : ''} ${hasChoiceIcon ? 'with-icons' : ''}` });
     q.choices.forEach((c, i) => {
       choices.append(
         el(
           'button',
           { class: 'choice unrevealed', 'data-i': String(i), disabled: true, onClick: () => this.reveal(i) },
-          c.image ? el('img', { class: 'choice-img', src: c.image, alt: '' }) : null,
-          el('div', { class: 'choice-row' }, el('span', { class: 'letter' }, LETTERS[i] ?? String(i + 1)), el('span', { class: 'choice-text' }, c.text)),
+          c.images?.length
+            ? el('div', { class: `choice-imgs n${c.images.length}` }, ...c.images.map((src) => el('img', { class: 'choice-img', src, alt: '' })))
+            : c.image
+              ? el('img', { class: 'choice-img', src: c.image, alt: '' })
+              : null,
+          el(
+            'div',
+            { class: 'choice-row' },
+            el('span', { class: 'letter' }, LETTERS[i] ?? String(i + 1)),
+            c.icon && !c.image && !c.images?.length ? el('span', { class: 'choice-icon' }, c.icon) : null,
+            el('span', { class: 'choice-text' }, c.text),
+          ),
         ),
       );
     });
@@ -116,7 +127,7 @@ export class QuizModal {
       el(
         'div',
         { class: `quiz-body ${q.image ? 'with-image' : ''} ${hasChoiceImage ? 'compact' : ''}` },
-        q.image ? el('div', { class: 'quiz-image' }, el('img', { src: q.image, alt: '' })) : null,
+        q.image ? el('div', { class: 'quiz-image' }, el('img', { src: q.image, alt: '' })) : q.icon ? el('div', { class: 'quiz-icon' }, q.icon) : null,
         el('div', { class: 'quiz-text' }, q.text),
       ),
       choices,
