@@ -235,6 +235,11 @@ details summary { cursor: pointer; }
 .choice-imgs { display: flex; gap: 6px; justify-content: center; min-width: 0; }
 .choice-imgs .choice-img { width: 100%; flex: 1 1 0; min-width: 0; aspect-ratio: 1; object-fit: cover; max-height: none; }
 .choice-imgs.n2 .choice-img { max-width: 48%; }
+/* 보기 글이 길면 2열로 넓게 */
+.choices.long-text { grid-template-columns: repeat(2, 1fr) !important; }
+.choices.long-text.with-images .choice { flex-direction: row; align-items: center; }
+.choices.long-text.with-images .choice-img { width: 30%; max-height: 18vh; flex: 0 0 30%; aspect-ratio: 1; object-fit: cover; }
+.choices.long-text.with-images .choice-row { flex: 1; min-width: 0; }
 /* 보기마다 사진이 여러 장이면 2열로 넓게 */
 .choices.with-images:has(.choice-imgs.n3), .choices.with-images:has(.choice-imgs.n4) { grid-template-columns: repeat(2, 1fr); }
 .choices.with-images:has(.choice-imgs.n4) .choice-img { max-height: 12vh; }

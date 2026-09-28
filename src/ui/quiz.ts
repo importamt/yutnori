@@ -92,7 +92,8 @@ export class QuizModal {
     clear(this.root);
     const hasChoiceImage = q.choices.some((c) => c.image || c.images?.length);
     const hasChoiceIcon = q.choices.some((c) => c.icon);
-    const choices = el('div', { class: `choices n${q.choices.length} ${hasChoiceImage ? 'with-images' : ''} ${hasChoiceIcon ? 'with-icons' : ''}` });
+    const longText = q.choices.some((c) => c.text.length > 18);
+    const choices = el('div', { class: `choices n${q.choices.length} ${hasChoiceImage ? 'with-images' : ''} ${hasChoiceIcon ? 'with-icons' : ''} ${longText ? 'long-text' : ''}` });
     q.choices.forEach((c, i) => {
       choices.append(
         el(
