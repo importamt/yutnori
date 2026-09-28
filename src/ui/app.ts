@@ -11,6 +11,7 @@ import {
   adminSetTurn,
   adminUpdateTeam,
   answerQuiz,
+  computeRanking,
   applyMove,
   createGame,
   inputThrow,
@@ -39,6 +40,7 @@ export class App {
   private banner: HTMLElement;
   private toastBox: HTMLElement;
   private tooltip: HTMLElement;
+  private results: HTMLElement;
   private questions: Question[] = SAMPLE_QUESTIONS;
   private busy = false;
   private panelHidden = false;
@@ -58,6 +60,8 @@ export class App {
     root.append(this.toastBox);
     this.tooltip = el('div', { class: 'tooltip rpg hidden' });
     root.append(this.tooltip);
+    this.results = el('div', { class: 'results-overlay hidden' });
+    root.append(this.results);
     stage.addEventListener('pointerleave', () => this.tooltip.classList.add('hidden'));
 
     this.panel = new Panel(root, this.actions());
@@ -109,6 +113,7 @@ export class App {
     this.busy = true;
     this.refreshPanel();
     this.renderBanner(state);
+    this.renderResults(state);
     if (this.quiz.isOpen && state.phase !== 'quiz') this.quiz.close();
 
     for (const ev of events) {
@@ -209,6 +214,47 @@ export class App {
       ),
       ranks.length ? el('div', { class: 'ranks' }, ...ranks) : null],
     );
+  }
+
+  /** 게임 종료 시 전체 순위 화면 */
+  private renderResults(s: GameState): void {
+    if (s.phase !== 'finished') {
+      this.results.classList.add('hidden');
+      return;
+    }
+    const ranking = computeRanking(s);
+    clear(this.results);
+    const rows = ranking.map((e) => {
+      const team = s.teams.find((t) => t.id === e.teamId)!;
+      const medal = ['🥇', '🥈', '🥉'][e.rank - 1];
+      let status: string;
+      if (e.finished) status = '완주';
+      else if (e.node === null) status = e.donePieces ? `완주 ${e.donePieces}/${e.totalPieces} · 나머지 집` : '집 (출발 전)';
+      else status = `${e.node === 'S' ? '출발점' : `${e.node} 칸`} · 골인까지 ${e.remaining}칸${e.onShortcut ? ' · 지름길' : ''}${e.totalPieces > 1 ? ` · 완주 ${e.donePieces}/${e.totalPieces}` : ''}`;
+      return el(
+        'li',
+        { class: `rank-row r${Math.min(e.rank, 4)} ${e.finished ? 'fin' : ''}` },
+        el('span', { class: 'rank-no' }, medal ?? `${e.rank}위`),
+        el('i', { class: 'sq', style: `background:${team.color}` }),
+        el('span', { class: 'rank-team' }, team.name),
+        el('span', { class: 'rank-status' }, status),
+      );
+    });
+    this.results.append(
+      el(
+        'div',
+        { class: 'results-card rpg' },
+        el('div', { class: 'results-head' }, pouchIcon(), el('h2', {}, '최종 순위'), el('span', { class: 'muted' }, '완주 순서 → 골인까지 남은 칸 (같으면 지름길 우선)')),
+        el('ol', { class: 'rank-list' }, ...rows),
+        el(
+          'div',
+          { class: 'results-actions' },
+          el('button', { class: 'pbtn', onClick: () => this.store.dispatch(adminResume) }, '게임 재개'),
+          el('button', { class: 'pbtn primary', onClick: () => { if (confirm('새 게임을 시작할까요?')) this.actions().newGame(); } }, '새 게임'),
+        ),
+      ),
+    );
+    this.results.classList.remove('hidden');
   }
 
   private teamName(s: GameState, id: string): string {

@@ -385,6 +385,85 @@ export function skipQuiz(state: GameState): GameState {
   return advance(s);
 }
 
+// ───────────────────────── 순위 ─────────────────────────
+
+export interface RankEntry {
+  rank: number;
+  teamId: string;
+  /** 모든 말 완주 */
+  finished: boolean;
+  donePieces: number;
+  totalPieces: number;
+  /** 가장 앞선 말의 골인까지 남은 칸 (완주 0, 집 20) */
+  remaining: number;
+  /** 가장 앞선 말의 위치 (null = 집 또는 완주) */
+  node: NodeId | null;
+  /** 가장 앞선 말이 지름길(A·B·방) 위에 있는가 — 남은 칸이 같으면 우선 */
+  onShortcut: boolean;
+}
+
+const HOME_REMAINING = 20;
+
+/** 이 말이 실제로 갈 경로(모서리·방에서는 지름길)를 따라 골인까지 남은 칸 수 */
+export function remainingSteps(piece: Pick<Piece, 'node' | 'trail' | 'done'>): number {
+  if (piece.done) return 0;
+  if (piece.node === null) return HOME_REMAINING;
+  for (let n = 1; n <= 40; n++) {
+    const r = computePath(piece, n);
+    if (r?.dest === 'DONE') return n;
+  }
+  return 99;
+}
+
+const isShortcutNode = (node: NodeId | null): boolean => !!node && /^[ABC]/.test(node);
+
+/**
+ * 현재 상태 기준 전체 순위.
+ * 1) 모든 말을 완주한 팀은 완주 순서대로
+ * 2) 나머지는 완주한 말 수 ↓ → 가장 앞선 말의 남은 칸 ↑ → 남은 칸이 같으면 지름길 위 말 우선 → 팀 순서
+ */
+export function computeRanking(state: GameState): RankEntry[] {
+  const entries: RankEntry[] = state.teams.map((t) => {
+    const ps = teamPieces(state, t.id);
+    const done = ps.filter((p) => p.done).length;
+    const active = ps.filter((p) => !p.done);
+    let best: Piece | null = null;
+    let bestRem = Infinity;
+    for (const p of active) {
+      const rem = remainingSteps(p);
+      if (rem < bestRem || (rem === bestRem && isShortcutNode(p.node) && !(best && isShortcutNode(best.node)))) {
+        best = p;
+        bestRem = rem;
+      }
+    }
+    return {
+      rank: 0,
+      teamId: t.id,
+      finished: ps.length > 0 && active.length === 0,
+      donePieces: done,
+      totalPieces: ps.length,
+      remaining: best ? bestRem : 0,
+      node: best?.node ?? null,
+      onShortcut: isShortcutNode(best?.node ?? null),
+    };
+  });
+  const finishedOrder = (id: string) => {
+    const i = state.finishOrder.indexOf(id);
+    return i >= 0 ? i : 999;
+  };
+  const teamIndex = (id: string) => state.teams.findIndex((t) => t.id === id);
+  entries.sort((a, b) => {
+    if (a.finished !== b.finished) return a.finished ? -1 : 1;
+    if (a.finished && b.finished) return finishedOrder(a.teamId) - finishedOrder(b.teamId);
+    if (a.donePieces !== b.donePieces) return b.donePieces - a.donePieces;
+    if (a.remaining !== b.remaining) return a.remaining - b.remaining;
+    if (a.onShortcut !== b.onShortcut) return a.onShortcut ? -1 : 1;
+    return teamIndex(a.teamId) - teamIndex(b.teamId);
+  });
+  entries.forEach((e, i) => (e.rank = i + 1));
+  return entries;
+}
+
 // ───────────────────────── 관리자 기능 ─────────────────────────
 
 export type AdminDest = NodeId | 'HOME' | 'DONE';

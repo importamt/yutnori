@@ -181,6 +181,24 @@ select { font: inherit; font-size: 13px; padding: 6px 8px; border: 2px solid var
 pre { font-size: 11px; background: rgba(0,0,0,0.3); padding: 8px; overflow: auto; color: var(--text); }
 details summary { cursor: pointer; }
 
+/* 종료 순위 화면 */
+.results-overlay { position: absolute; inset: 0; z-index: 18; display: flex; align-items: center; justify-content: center; background: rgba(14, 21, 38, 0.6); backdrop-filter: blur(3px); }
+.results-card { width: min(760px, calc(100vw - var(--panel-w) - 64px)); max-height: 92vh; overflow: auto; padding: 22px 28px 18px; border-color: var(--yellow); animation: pop 0.3s steps(5); }
+.panel-hidden .results-card { width: min(820px, 92vw); }
+.results-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+.results-head h2 { margin: 0; font-size: 26px; color: var(--yellow); text-shadow: 2px 2px 0 var(--outline); }
+.results-head .muted { font-size: 12px; margin-left: auto; }
+.rank-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.rank-row { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--navy-2); border: 2px solid var(--navy-3); font-size: 18px; }
+.rank-row.r1 { border-color: #f2c744; background: #5a3a1e; font-size: 24px; }
+.rank-row.r2 { border-color: #d9dde3; background: #4a3d4a; font-size: 21px; }
+.rank-row.r3 { border-color: #d08a4a; background: #4d3128; font-size: 20px; }
+.rank-no { flex: 0 0 64px; text-align: center; font-weight: 700; }
+.rank-team { font-weight: 700; }
+.rank-status { margin-left: auto; font-size: 13px; color: var(--muted); text-align: right; }
+.rank-row.fin .rank-status { color: #8ef08a; }
+.results-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+
 /* 설정 화면 */
 .setup-overlay { position: absolute; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center; background: rgba(14, 21, 38, 0.45); backdrop-filter: blur(3px); }
 .setup-card { width: min(720px, 94vw); max-height: 92vh; overflow: auto; padding: 26px 30px; }

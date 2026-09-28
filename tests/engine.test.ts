@@ -8,6 +8,8 @@ import {
   adminMovePiece,
   adminSetTurn,
   skipQuiz,
+  computeRanking,
+  remainingSteps,
   type GameState,
 } from '../src/game/engine';
 import { SAMPLE_QUESTIONS } from '../src/data/sampleQuestions';
@@ -327,5 +329,38 @@ describe('admin controls', () => {
     expect(s.turnIndex).toBe(2);
     expect(s.phase).toBe('throw');
     expect(s.pending).toEqual([]);
+  });
+});
+
+describe('ranking at game end', () => {
+  it('counts remaining steps to the goal along the route the piece would take', () => {
+    expect(remainingSteps({ node: null, trail: [], done: false })).toBe(20);
+    expect(remainingSteps({ node: '19', trail: ['19'], done: false })).toBe(1);
+    expect(remainingSteps({ node: 'B4', trail: ['B4'], done: false })).toBe(1);
+    expect(remainingSteps({ node: 'C', trail: ['C'], done: false })).toBe(3);
+    expect(remainingSteps({ node: '10', trail: ['10'], done: false })).toBe(6);
+    expect(remainingSteps({ node: '14', trail: ['14'], done: false })).toBe(6);
+    expect(remainingSteps({ node: 'A3', trail: ['A3'], done: false })).toBe(7);
+    expect(remainingSteps({ node: '1', trail: ['1'], done: true })).toBe(0);
+  });
+
+  it('ranks finished teams first, then by closeness; shortcut wins ties (B4 over 19)', () => {
+    let s = game(1);
+    s = placePiece(s, 't1-1', '19');
+    s = placePiece(s, 't2-1', 'B4');
+    s = placePiece(s, 't3-1', 'DONE');
+    const r = computeRanking(s);
+    expect(r.map((e) => e.teamId)).toEqual(['t3', 't2', 't1']);
+    expect(r[0]).toMatchObject({ rank: 1, finished: true });
+    expect(r[1]).toMatchObject({ rank: 2, remaining: 1, onShortcut: true });
+    expect(r[2]).toMatchObject({ rank: 3, remaining: 1, onShortcut: false });
+  });
+
+  it('teams still at home rank last', () => {
+    let s = game(1);
+    s = placePiece(s, 't1-1', '2');
+    const r = computeRanking(s);
+    expect(r[0].teamId).toBe('t1');
+    expect(r.slice(1).every((e) => e.remaining === 20)).toBe(true);
   });
 });

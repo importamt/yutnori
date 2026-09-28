@@ -260,6 +260,9 @@ export class Panel {
         el('button', { class: 'pbtn', disabled: !this.canUndo || this.busy, onClick: () => this.actions.undo() }, '↶ 되돌리기'),
         el('button', { class: 'pbtn', disabled: this.busy || s.phase === 'finished', onClick: () => this.actions.endTurn() }, '차례 넘기기 ▶'),
       ),
+      s.phase === 'finished'
+        ? el('button', { class: 'pbtn', onClick: () => this.actions.adminResume() }, '게임 재개 (순위 화면 닫기)')
+        : el('button', { class: 'pbtn danger', disabled: this.busy, onClick: () => { if (confirm('게임을 종료하고 현재 상태로 순위를 발표할까요? (재개 가능)')) this.actions.adminFinish(); } }, '🏁 게임 종료 · 순위 발표'),
     );
 
     body.append(el('ul', { class: 'log' }, ...[...s.log].slice(-4).reverse().map((l) => el('li', {}, l.text))));

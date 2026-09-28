@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { BOARD, EDGES, nodeById, type Dest, type NodeId } from '../game/board';
-import type { GameEvent, GameState, MoveOption, Piece, Team } from '../game/engine';
+import { computeRanking, type GameEvent, type GameState, type MoveOption, type Piece, type Team } from '../game/engine';
 import { faceTexture, flagTexture, glowSpriteTexture, signTexture } from './textures';
 
 /**
@@ -769,7 +769,7 @@ export class BoardScene {
       flag.geometry.translate(0.5, 0, 0); // 왼쪽 가장자리를 원점으로 → 깃대에 붙어 회전
       flag.position.set(0.27, 1.26, -0.1);
       flag.castShadow = true;
-      flag.userData.pieceId = p.id;
+      // 깃발·깃대는 클릭 대상에서 제외 (뒤에 있는 칸을 가리지 않도록)
       group.add(flag);
       this.scene.add(group);
       this.pieces.set(p.id, { group, body, hat, marker, flag, teamId: p.teamId, teamName: team.name, color: team.color });
@@ -831,7 +831,9 @@ export class BoardScene {
 
   sync(state: GameState): void {
     this.lastState = state;
-    this.ensureTeams(state.teams, state.finishOrder);
+    // 게임 종료 시에는 전체 순위(미완주 팀 포함)를 팻말에 표시
+    const order = state.phase === 'finished' ? computeRanking(state).map((e) => e.teamId) : state.finishOrder;
+    this.ensureTeams(state.teams, order);
     this.ensurePieces(state);
     this.restYs.clear();
     for (const p of state.pieces) {
