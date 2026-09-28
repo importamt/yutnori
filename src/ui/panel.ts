@@ -376,7 +376,7 @@ export class Panel {
         el('div', { class: 'box-title' }, `퀴즈 수동 출제 (${s.usedQuestionIds.length}/${s.questions.length})`),
         qSel,
         el('button', { class: 'pbtn primary', disabled: s.phase === 'quiz' || !s.questions.length, onClick: () => this.actions.adminQuiz(this.adminQuizQ || undefined) }, `${team?.name ?? ''}에게 노출`),
-        el('p', { class: 'hint' }, '결과(+2/-2)는 현재 팀의 판 위 말이 하나일 때 자동 적용, 아니면 이동 없이 기록만.'),
+        el('p', { class: 'hint' }, '결과(정답 +2 / 오답 -1)는 현재 팀의 판 위 말이 하나일 때 자동 적용, 아니면 이동 없이 기록만.'),
       ),
     );
 

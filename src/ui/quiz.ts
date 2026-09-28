@@ -1,7 +1,8 @@
-import type { Question } from '../game/quiz';
+import { QUIZ_BONUS_STEPS, QUIZ_PENALTY_STEPS, type Question } from '../game/quiz';
 import { clear, el, pouchIcon } from './dom';
 
-const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F'];
+/** 보기 번호 (1부터) */
+const LETTERS = ['1', '2', '3', '4', '5', '6'];
 
 export interface QuizModalOptions {
   /** 보기 클릭 → 판정 공개 (이동은 아직) */
@@ -123,7 +124,7 @@ export class QuizModal {
         el('span', { class: 'quiz-badge' }, pouchIcon(), '퀴즈'),
         el('span', { class: 'quiz-team', style: `--team:${teamColor}` }, el('i', { class: 'sq', style: `background:${teamColor}` }), teamName),
         el('span', { class: 'quiz-guide', id: 'quiz-guide' }),
-        el('span', { class: 'quiz-rule' }, '정답 +2 · 오답 -2'),
+        el('span', { class: 'quiz-rule' }, `정답 +${QUIZ_BONUS_STEPS} · 오답 ${QUIZ_PENALTY_STEPS}`),
       ),
       el(
         'div',
@@ -158,13 +159,13 @@ export class QuizModal {
     const res = this.root.querySelector('#quiz-result')!;
     clear(res as HTMLElement);
     res.append(
-      el('div', { class: `verdict ${correct ? 'ok' : 'no'}` }, correct ? '정답! 앞으로 2칸' : '오답… 뒤로 2칸'),
+      el('div', { class: `verdict ${correct ? 'ok' : 'no'}` }, correct ? `정답! 앞으로 ${QUIZ_BONUS_STEPS}칸` : `오답… 뒤로 ${-QUIZ_PENALTY_STEPS}칸`),
       q.explanation ? el('div', { class: 'explain' }, q.explanation) : el('span'),
     );
     const apply = this.root.querySelector<HTMLButtonElement>('#quiz-apply')!;
     apply.classList.remove('hidden');
     apply.classList.toggle('danger', !correct);
-    apply.textContent = correct ? '+2 적용' : '-2 적용';
+    apply.textContent = correct ? `+${QUIZ_BONUS_STEPS} 적용` : `${QUIZ_PENALTY_STEPS} 적용`;
     apply.onclick = () => this.opts.onApply(i);
     this.opts.onReveal(i, correct);
   }

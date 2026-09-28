@@ -301,7 +301,7 @@ function performMove(
     pieces: s.pieces.map((p) => (movers.has(p.id) ? { ...p, node: dest, trail: [...trail] } : p)),
   };
   const stacked = s.pieces.filter((p) => p.node === dest && p.teamId === lead.teamId).length;
-  const label = source === 'quiz' ? (steps > 0 ? '정답 +2' : '오답 -2') : `${steps > 0 ? '+' : ''}${steps}`;
+  const label = source === 'quiz' ? (steps > 0 ? `정답 +${steps}` : `오답 ${steps}`) : `${steps > 0 ? '+' : ''}${steps}`;
   s = withLog(s, `${team.name}: ${lead.node ?? '출발'} → ${dest} (${label})${stacked > 1 ? ` · ${stacked}개 업음` : ''}`);
 
   const landedQuiz = source === 'throw' && QUIZ_NODES.has(dest) ? dest : null;
@@ -361,7 +361,7 @@ export function answerQuiz(state: GameState, choiceIndex: number): GameState {
     events: [{ type: 'quizResult', correct, teamId: state.quiz.teamId }],
     seq: state.seq + 1,
   };
-  s = withLog(s, `${teamName(s, state.quiz.teamId)}: ${correct ? '정답! +2' : '오답… -2'}`);
+  s = withLog(s, `${teamName(s, state.quiz.teamId)}: ${correct ? `정답! +${QUIZ_BONUS_STEPS}` : `오답… ${QUIZ_PENALTY_STEPS}`}`);
   const steps = correct ? QUIZ_BONUS_STEPS : QUIZ_PENALTY_STEPS;
   let piece: Piece | null = state.quiz.pieceId ? findPiece(s, state.quiz.pieceId) : null;
   if (!piece) {

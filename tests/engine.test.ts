@@ -256,26 +256,26 @@ describe('quiz squares', () => {
     expect(s.turnIndex).toBe(1);
   });
 
-  it('a wrong answer moves -2', () => {
+  it('a wrong answer moves -1', () => {
     let s = game();
     s = placePiece(s, 't1-1', '4');
     s = inputThrow(s, 'gae');
     s = applyMove(s, [0], optFrom(s, ['gae'], '4'));
     const q = SAMPLE_QUESTIONS.find((x) => x.id === s.quiz!.questionId)!;
     s = answerQuiz(s, (q.answer + 1) % q.choices.length);
-    expect(s.pieces.find((p) => p.id === 't1-1')!.node).toBe('4');
+    expect(s.pieces.find((p) => p.id === 't1-1')!.node).toBe('5');
   });
 
   it('a bonus move landing on another quiz square does not re-trigger a quiz', () => {
     let s = game();
-    s = placePiece(s, 't1-1', '7'); // 개 -> 9 (quiz), +2 -> 11 ; -2 -> 7
+    s = placePiece(s, 't1-1', '7'); // 개 -> 9 (quiz), +2 -> 11 ; -1 -> 8
     s = placePiece(s, 't1-2', '10'); // dummy, unaffected
     s = inputThrow(s, 'gae');
     const opt = movableOptions(s, ['gae']).find((o) => o.kind === 'piece' && o.from === '7')!;
     s = applyMove(s, [0], opt);
     expect(s.phase).toBe('quiz');
     const q = SAMPLE_QUESTIONS.find((x) => x.id === s.quiz!.questionId)!;
-    // wrong: 9 -> 7. 7 is not quiz, so simply check phase is not quiz afterwards
+    // wrong: 9 -> 8. 8 is not quiz, so simply check phase is not quiz afterwards
     s = answerQuiz(s, (q.answer + 1) % q.choices.length);
     expect(s.phase).not.toBe('quiz');
   });

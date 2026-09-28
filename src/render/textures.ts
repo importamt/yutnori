@@ -62,6 +62,31 @@ export function signTexture(name: string, color: string, rank: number | null = n
   return crisp(new THREE.CanvasTexture(c));
 }
 
+/** 말이 들고 다니는 팀 깃발: 팀 색 바탕 + 픽셀 글씨 팀 이름 (양면 표시용으로 좌우 대칭 없음) */
+export function flagTexture(name: string, color: string, w = 512, h = 288): THREE.CanvasTexture {
+  const [c, ctx] = canvas(w, h);
+  ctx.fillStyle = '#1e0f17';
+  ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = color;
+  ctx.fillRect(10, 10, w - 20, h - 20);
+  // 테두리 안쪽 밝은 띠
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.fillRect(22, 22, w - 44, 10);
+  ctx.fillRect(22, h - 32, w - 44, 10);
+  const ink = readableInk(color);
+  ctx.fillStyle = ink;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  let size = 84;
+  ctx.font = `${size}px ${PIXEL_FONT}`;
+  while (ctx.measureText(name).width > w - 80 && size > 28) {
+    size -= 4;
+    ctx.font = `${size}px ${PIXEL_FONT}`;
+  }
+  ctx.fillText(name, w / 2, h / 2 + 4);
+  return crisp(new THREE.CanvasTexture(c));
+}
+
 /** 캐릭터 얼굴 (눈 두 개 + 입) */
 export function faceTexture(size = 64): THREE.CanvasTexture {
   const [c, ctx] = canvas(size, size);

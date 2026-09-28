@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { BOARD, EDGES, nodeById, type Dest, type NodeId } from '../game/board';
 import type { GameEvent, GameState, MoveOption, Piece, Team } from '../game/engine';
-import { faceTexture, glowSpriteTexture, signTexture } from './textures';
+import { faceTexture, flagTexture, glowSpriteTexture, signTexture } from './textures';
 
 /**
  * 복셀(큐브) 스타일 윷판 장면.
@@ -68,7 +68,10 @@ interface PieceView {
   hat: THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial>;
   /** 현재 차례 표식 (머리 위 화살표) */
   marker: THREE.Group;
+  /** 팀 이름 깃발 (펄럭임 + 이름/색 변경 시 텍스처 갱신) */
+  flag: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>;
   teamId: string;
+  teamName: string;
   color: string;
 }
 
@@ -709,10 +712,14 @@ export class BoardScene {
       const team = state.teams.find((t) => t.id === p.teamId)!;
       const existing = this.pieces.get(p.id);
       if (existing) {
-        if (existing.color !== team.color) {
+        if (existing.color !== team.color || existing.teamName !== team.name) {
           const c = new THREE.Color(team.color);
           existing.body.material.color.copy(c);
+          existing.flag.material.map?.dispose();
+          existing.flag.material.map = flagTexture(team.name, team.color);
+          existing.flag.material.needsUpdate = true;
           existing.color = team.color;
+          existing.teamName = team.name;
         }
         continue;
       }
@@ -750,8 +757,22 @@ export class BoardScene {
       marker.userData.footRing = footRing;
       group.add(footRing);
       footRing.visible = false;
+      // 팀 깃발: 오른쪽 어깨 뒤 깃대 + 깃발 (깃대 쪽 가장자리를 축으로 펄럭임)
+      const pole = cube(0x6b4a2b, 0.24, 0.8, -0.1, 0.045, 1.5, 0.045);
+      group.add(pole);
+      const poleTop = cube(0xf2c744, 0.24, 1.58, -0.1, 0.09, 0.09, 0.09, false);
+      group.add(poleTop);
+      const flag = new THREE.Mesh(
+        new THREE.PlaneGeometry(1.0, 0.56),
+        new THREE.MeshBasicMaterial({ map: flagTexture(team.name, team.color), side: THREE.DoubleSide }),
+      );
+      flag.geometry.translate(0.5, 0, 0); // 왼쪽 가장자리를 원점으로 → 깃대에 붙어 회전
+      flag.position.set(0.27, 1.26, -0.1);
+      flag.castShadow = true;
+      flag.userData.pieceId = p.id;
+      group.add(flag);
       this.scene.add(group);
-      this.pieces.set(p.id, { group, body, hat, marker, teamId: p.teamId, color: team.color });
+      this.pieces.set(p.id, { group, body, hat, marker, flag, teamId: p.teamId, teamName: team.name, color: team.color });
     }
   }
 
@@ -1100,6 +1121,10 @@ export class BoardScene {
         } else mat.emissiveIntensity = 0;
         if (!this.animating) v.group.position.y = this.restY(id);
       }
+      // 깃발 펄럭임 (말마다 위상 다르게)
+      const ph = (id.charCodeAt(1) + id.charCodeAt(id.length - 1)) * 0.7;
+      v.flag.rotation.y = Math.sin(elapsed * 3.5 + ph) * 0.14 - 0.12; // 대체로 정면(카메라)을 향한 채 살짝 펄럭임
+      v.flag.rotation.z = Math.sin(elapsed * 5.5 + ph) * 0.03;
       // 현재 차례 팀의 말 머리 위 화살표: 통통 뛰며 회전. 이동 연출 중에는 숨긴다
       const isTurn = !this.animating && !!this.currentTeamId && v.teamId === this.currentTeamId && !this.isDone(id);
       v.marker.visible = isTurn;

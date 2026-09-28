@@ -19,7 +19,7 @@ import {
   type GameEvent,
   type GameState,
 } from '../game/engine';
-import { validateQuestions, type Question } from '../game/quiz';
+import { QUIZ_BONUS_STEPS, QUIZ_PENALTY_STEPS, validateQuestions, type Question } from '../game/quiz';
 import { GameStore } from '../game/store';
 import { YUT_INFO, type YutResult } from '../game/yut';
 import { BoardScene } from '../render/scene';
@@ -120,7 +120,7 @@ export class App {
         this.audio.sfxCatch();
         this.toast('잡았다!', `${this.teamName(state, ev.byTeamId)} · 한 번 더`, 'catch');
       }
-      if (ev.type === 'quizResult') this.toast(ev.correct ? '정답!' : '오답', ev.correct ? '앞으로 2칸' : '뒤로 2칸', ev.correct ? 'ok' : 'no');
+      if (ev.type === 'quizResult') this.toast(ev.correct ? '정답!' : '오답', ev.correct ? `앞으로 ${QUIZ_BONUS_STEPS}칸` : `뒤로 ${-QUIZ_PENALTY_STEPS}칸`, ev.correct ? 'ok' : 'no');
       if (ev.type === 'teamFinished') {
         this.audio.sfxFinish();
         this.toast(`${['🥇', '🥈', '🥉'][ev.rank - 1] ?? `${ev.rank}위`} ${this.teamName(state, ev.teamId)}`, '모든 말 완주!', 'finish');

@@ -28,7 +28,7 @@ export interface Question {
 }
 
 export const QUIZ_BONUS_STEPS = 2;
-export const QUIZ_PENALTY_STEPS = -2;
+export const QUIZ_PENALTY_STEPS = -1;
 
 /** 문자열 보기를 객체로 정규화 */
 export function toChoice(raw: unknown): Choice {
